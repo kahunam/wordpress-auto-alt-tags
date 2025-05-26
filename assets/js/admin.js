@@ -29,17 +29,10 @@
         $('form').on('submit', function(e) {
             if (processing) {
                 e.preventDefault();
-                showNotice('Please wait for processing to complete before changing settings.', 'warning');
+                alert(autoAltAjax.processingMessage || 'Please wait for processing to complete before changing settings.');
                 return false;
             }
         });
-
-        // Auto-refresh stats periodically when not processing
-        setInterval(function() {
-            if (!processing) {
-                refreshStats(true); // Silent refresh
-            }
-        }, 30000); // Every 30 seconds
     }
 
     function startProcessing() {
@@ -144,9 +137,6 @@
         updateButtonStates();
         logMessage('Processing completed: ' + message, 'info');
         
-        // Show final result
-        showNotice(message, 'success');
-        
         // Refresh stats to show updated numbers
         setTimeout(function() {
             refreshStats();
@@ -166,6 +156,7 @@
     function showProgressSection() {
         $('#alt-tag-progress').show();
         $('#control-buttons').hide();
+        $('#processing-log').show();
     }
 
     function hideProgressSection() {
@@ -178,17 +169,12 @@
             $('#start-processing').prop('disabled', true);
             $('#stop-processing').prop('disabled', false);
             $('#refresh-stats').prop('disabled', true);
-            
-            // Add loading spinner to start button
-            $('#start-processing').html('<span class="loading-spinner"></span>Processing...');
         } else {
             $('#start-processing').prop('disabled', false);
             $('#stop-processing').prop('disabled', true);
             $('#refresh-stats').prop('disabled', false);
             
-            // Remove loading spinner
-            $('#start-processing').html('🚀 Start Auto-Tagging Images');
-            $('#stop-processing').text('⏹️ Stop Processing');
+            $('#stop-processing').text('Stop Processing');
             
             hideProgressSection();
         }
@@ -196,7 +182,7 @@
 
     function refreshStats(silent = false) {
         if (!silent) {
-            $('#refresh-stats').prop('disabled', true).html('<span class="loading-spinner"></span>Refreshing...');
+            $('#refresh-stats').prop('disabled', true).text('Refreshing...');
         }
         
         $.ajax({
@@ -209,39 +195,28 @@
             success: function(response) {
                 if (response.success) {
                     updateStatsDisplay(response.data);
-                    if (!silent) {
-                        showNotice('Statistics refreshed successfully.', 'success', 3000);
-                    }
-                } else {
-                    if (!silent) {
-                        showNotice('Failed to refresh statistics.', 'error');
-                    }
-                }
-            },
-            error: function() {
-                if (!silent) {
-                    showNotice('Failed to refresh statistics.', 'error');
                 }
             },
             complete: function() {
                 if (!silent) {
-                    $('#refresh-stats').prop('disabled', false).html('🔄 Refresh Statistics');
+                    $('#refresh-stats').prop('disabled', false).text('Refresh Statistics');
                 }
             }
         });
     }
 
     function updateStatsDisplay(stats) {
-        $('.stat-card').eq(0).find('h3').text(formatNumber(stats.total));
-        $('.stat-card').eq(1).find('h3').text(formatNumber(stats.with_alt));
-        $('.stat-card').eq(2).find('h3').text(formatNumber(stats.without_alt));
-        $('.stat-card').eq(3).find('h3').text(stats.percentage + '%');
+        // Update stats in the table
+        $('table.widefat tbody tr').eq(0).find('td:last strong').text(formatNumber(stats.total));
+        $('table.widefat tbody tr').eq(1).find('td:last strong').text(formatNumber(stats.with_alt));
+        $('table.widefat tbody tr').eq(2).find('td:last strong').text(formatNumber(stats.without_alt));
+        $('table.widefat tbody tr').eq(3).find('td:last strong').text(stats.percentage + '%');
         
         // Update button state based on images needing alt tags
         if (stats.without_alt === 0) {
             $('#start-processing').prop('disabled', true).text('✅ All images have alt tags');
         } else if (!processing) {
-            $('#start-processing').prop('disabled', false).html('🚀 Start Auto-Tagging Images');
+            $('#start-processing').prop('disabled', false).text('Start Auto-Tagging Images');
         }
     }
 
@@ -271,39 +246,8 @@
 
     function clearLog() {
         $('#processing-log').empty();
+        $('#processing-log').append('<h3>Processing Log</h3>');
     }
-
-    function showNotice(message, type = 'info', autoHide = 5000) {
-        // Remove existing notices
-        $('.auto-alt-notice').remove();
-        
-        const notice = $(`
-            <div class="auto-alt-notice ${type}">
-                <p>${message}</p>
-            </div>
-        `);
-        
-        $('.auto-alt-tags-admin h1').after(notice);
-        
-        // Auto-hide notice
-        if (autoHide > 0) {
-            setTimeout(function() {
-                notice.fadeOut(300, function() {
-                    $(this).remove();
-                });
-            }, autoHide);
-        }
-    }
-
-    // Utility function to handle page visibility changes
-    // Pause processing when tab is not visible to save resources
-    document.addEventListener('visibilitychange', function() {
-        if (document.hidden && processing) {
-            logMessage('Tab hidden - processing continues in background', 'info');
-        } else if (!document.hidden && processing) {
-            logMessage('Tab visible - processing resumed', 'info');
-        }
-    });
 
     // Handle beforeunload event to warn about ongoing processing
     window.addEventListener('beforeunload', function(e) {
@@ -314,47 +258,5 @@
             return message;
         }
     });
-
-    // Keyboard shortcuts
-    $(document).on('keydown', function(e) {
-        // Only when not in an input field
-        if ($(e.target).is('input, textarea, select')) {
-            return;
-        }
-        
-        // Ctrl/Cmd + Enter to start processing
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-            e.preventDefault();
-            if (!processing) {
-                startProcessing();
-            }
-        }
-        
-        // Escape to stop processing
-        if (e.key === 'Escape' && processing) {
-            e.preventDefault();
-            stopProcessing();
-        }
-        
-        // R to refresh stats
-        if (e.key === 'r' && !processing) {
-            e.preventDefault();
-            refreshStats();
-        }
-    });
-
-    // Add keyboard shortcut hints
-    function addKeyboardHints() {
-        const hints = `
-            <div style="margin-top: 20px; padding: 10px; background: #f0f0f1; border-radius: 4px; font-size: 12px; color: #666;">
-                <strong>Keyboard shortcuts:</strong>
-                Ctrl+Enter: Start processing | Escape: Stop processing | R: Refresh stats
-            </div>
-        `;
-        $('.settings-section').after(hints);
-    }
-
-    // Initialize keyboard hints
-    addKeyboardHints();
 
 })(jQuery);
