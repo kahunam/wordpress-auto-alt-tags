@@ -8,7 +8,7 @@ A powerful WordPress plugin that intelligently generates descriptive alt text fo
 
 - **🤖 AI-Powered Alt Text Generation** - Uses Gemini Flash 2.5 for accurate, descriptive alt tags
 - **⚡ Batch Processing** - Process multiple images efficiently without timeout issues  
-- **💰 Cost Optimized** - Automatically resizes images to save API credits (up to 80% savings)
+- **💰 Cost Optimized** - Automatically uses WordPress thumbnail sizes to save API credits (up to 80% savings)
 - **📊 Progress Tracking** - Real-time progress updates with detailed statistics
 - **🔄 Resume Capability** - Can restart where it left off if interrupted
 - **💻 WP-CLI Support** - Command-line interface for developers and automation
@@ -86,19 +86,20 @@ wp auto-alt generate --dry-run
 wp auto-alt generate --limit=100
 ```
 
-## 📊 Settings
+## 📋 Settings
 
 | Setting | Description | Default |
 |---------|-------------|---------|
 | **Gemini API Key** | Your Google AI Studio API key | None |
 | **Batch Size** | Images processed per batch (1-50) | 10 |
 | **Max Image Size** | Maximum size sent to API in pixels | 512px |
+| **Enable Debug Logging** | Turn on detailed error logging | Off |
 
 ## 🎯 Cost Optimization
 
 The plugin includes several features to minimize API costs:
 
-- **Image Resizing**: Automatically resizes images to 512px maximum (saves ~80% on credits)
+- **WordPress Thumbnails**: Uses existing WordPress thumbnail sizes to avoid creating new resized images
 - **Smart Filtering**: Only processes images without existing alt text
 - **Batch Processing**: Prevents API rate limiting with configurable delays
 - **Efficient Model**: Uses Gemini Flash 2.5 (most cost-effective option)
@@ -124,6 +125,7 @@ The admin interface provides comprehensive statistics:
 ### API Details
 
 - **Endpoint**: Gemini Flash 2.5 via Google AI Studio
+- **Model**: gemini-2.5-flash-preview-04-17
 - **Image Format**: JPEG (auto-converted)
 - **Max Tokens**: 50 (optimized for alt text)
 - **Temperature**: 0.3 (balanced creativity/consistency)
@@ -151,21 +153,23 @@ auto-alt-tags/
 **"Gemini API key not configured"**
 - Ensure your API key is properly set in wp-config.php or admin settings
 
-**"Failed to create resized image"**
+**"Failed to get image URL"**
 - Check file permissions in uploads directory
 - Ensure GD or ImageMagick extension is installed
 
 **"API request failed"**
 - Verify your API key is valid and has credits
 - Check server has outbound HTTPS access
+- Ensure you're using the correct model name (gemini-2.5-flash-preview-04-17)
 
 **Processing stops unexpectedly**
 - Use WP-CLI for large batches to avoid browser timeouts
 - Check PHP memory and execution time limits
+- Enable debug logging to see detailed error messages
 
 ### Debug Mode
 
-Enable WordPress debug mode to see detailed error logs:
+Enable detailed error logging in the plugin settings or check WordPress debug logs:
 
 ```php
 define('WP_DEBUG', true);
