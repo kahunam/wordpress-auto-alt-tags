@@ -4,6 +4,46 @@ All notable changes to the Auto Alt Tags plugin will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-05-26
+
+### 🚀 Updated to 2025 Standards
+
+**Major API Update:**
+- **Upgraded to Gemini 2.5 Flash** (`gemini-2.5-flash-preview-05-20`) - the latest and most efficient model
+- **20-30% better efficiency** with improved token usage and performance
+- **Enhanced reasoning capabilities** while maintaining speed and cost efficiency
+
+**WordPress 2025 Compliance:**
+- **PHP 7.4+ type declarations** added throughout codebase for better performance and reliability
+- **Enhanced security measures** with improved nonce verification and capability checks
+- **Better accessibility** with proper ARIA labels and semantic markup
+- **Plugin Check compatibility** - ready for automated WordPress.org reviews
+
+**Code Quality Improvements:**
+- **Prepared statements** for all database queries to prevent SQL injection
+- **Enhanced error handling** with detailed logging and user-friendly messages
+- **Better internationalization** with proper text domain usage
+- **WordPress file functions** (`wp_delete_file`, `wp_tempnam`) instead of native PHP functions
+- **Proper escaping** and sanitization throughout the admin interface
+
+**Developer Experience:**
+- **Comprehensive PHPDoc** comments for all methods
+- **Type hints** for parameters and return values where supported
+- **Better code organization** with logical method grouping
+- **Consistent naming conventions** following WordPress standards
+
+### Fixed
+- Updated deprecated `unlink()` calls to use WordPress `wp_delete_file()`
+- Improved temporary file handling with WordPress-native functions
+- Enhanced AJAX error handling with proper JSON responses
+- Better validation for user inputs and API responses
+
+### Security
+- Strengthened nonce verification across all AJAX endpoints
+- Enhanced user capability checking before sensitive operations
+- Improved input sanitization and output escaping
+- More robust error logging without exposing sensitive information
+
 ## [1.0.0] - 2025-05-26
 
 ### Added
@@ -74,6 +114,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Support for additional AI providers (OpenAI GPT-4V, Claude Vision)
   - API key rotation for high-volume usage
   - Rate limiting and quota management
+  - Integration with Gemini 2.5 Pro Deep Think for complex images
 - **Bulk operations**:
   - Export/import alt text as CSV
   - Bulk edit existing alt text
@@ -87,16 +128,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Alt text quality scoring and suggestions
   - Integration with popular page builders
   - SEO analysis and recommendations
+  - Machine learning-based alt text improvement suggestions
 
 ### Bug Fixes and Improvements
 - Performance optimizations for large media libraries
 - Enhanced error handling and recovery
 - Improved mobile interface responsiveness
 - Better API timeout management
+- Advanced thinking budget controls for Gemini 2.5 models
 
 ---
 
-## Contributing
+## 🔄 Migration Notes
+
+### Upgrading from 1.0.0 to 1.0.1
+- **No breaking changes** - the update is fully backward compatible
+- **API improvements** will automatically use the more efficient Gemini 2.5 Flash model
+- **Enhanced security** provides better protection without affecting functionality
+- **Performance gains** will be immediately apparent with reduced token usage
+
+## 🛠️ Development & Contributing
 
 We welcome contributions! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
@@ -115,6 +166,6 @@ Please use the [GitHub Issues](https://github.com/kahunam/wordpress-auto-alt-tag
 - Steps to reproduce the issue
 - Any error messages
 
-## License
+## 📄 License
 
 This project is licensed under the GPL v2 or later - see the [LICENSE](LICENSE) file for details.
