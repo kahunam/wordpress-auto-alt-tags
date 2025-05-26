@@ -4,6 +4,28 @@ All notable changes to the Auto Alt Tags plugin will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2025-05-26
+
+### 🔧 Fixed
+- **API Model Name**: Updated to use correct Gemini 2.5 Flash model name (`gemini-2.5-flash-preview-04-17`)
+- **API Request Processing**: Fixed issue where plugin would show "Processing" but not make actual API requests
+- **Error Logging**: Added comprehensive error logging with debug mode option
+- **Image Optimization**: Now uses existing WordPress thumbnail sizes instead of creating new resized images
+- **UI Improvements**: Simplified admin interface to use WordPress default styles (removed custom gradients and animations)
+
+### 🚀 Improved
+- **Better Error Handling**: Added detailed error messages and logging throughout the plugin
+- **WordPress Standards**: Updated UI to follow WordPress default design patterns
+- **Performance**: Uses WordPress built-in image sizes for better performance and reduced server load
+- **Debug Mode**: Added checkbox in settings to enable/disable debug logging
+- **API Response Handling**: Improved validation of API responses with better error messages
+
+### 📝 Changed
+- Replaced custom CSS animations with WordPress default styles
+- Simplified JavaScript to remove unnecessary UI effects
+- Updated admin interface to use WordPress card components
+- Improved error messages to be more user-friendly
+
 ## [1.0.1] - 2025-05-26
 
 ### 🚀 Updated to 2025 Standards
@@ -146,6 +168,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - **API improvements** will automatically use the more efficient Gemini 2.5 Flash model
 - **Enhanced security** provides better protection without affecting functionality
 - **Performance gains** will be immediately apparent with reduced token usage
+
+### Upgrading from 1.0.1 to 1.0.2
+- **No breaking changes** - fully backward compatible
+- **API model update** will use the correct Gemini 2.5 Flash preview model
+- **UI changes** simplify the interface but maintain all functionality
+- **Debug mode** adds new logging capabilities without affecting existing features
 
 ## 🛠️ Development & Contributing
 
