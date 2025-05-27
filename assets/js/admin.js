@@ -10,6 +10,8 @@
 
     let isProcessing = false;
     let shouldStop = false;
+    let totalImages = 0;
+    let processedImages = 0;
 
     /**
      * Log debug message to console and UI
@@ -47,6 +49,27 @@
     }
 
     /**
+     * Get initial statistics to know total images
+     */
+    function getInitialStats(callback) {
+        $.ajax({
+            url: autoAltAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'get_image_stats',
+                nonce: autoAltAjax.nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    totalImages = response.data.without_alt;
+                    debugLog('Total images to process: ' + totalImages);
+                    if (callback) callback();
+                }
+            }
+        });
+    }
+
+    /**
      * Process alt tags batch by batch
      */
     function processAltTags() {
@@ -69,7 +92,17 @@
                 debugLog('Response received: ' + JSON.stringify(response));
                 
                 if (response.success) {
-                    updateProgress(response.data.progress, response.data.message);
+                    // Update processed count based on the message
+                    // Extract processed count from message like "Processed 10/50 images"
+                    const match = response.data.message.match(/Processed (\d+)\/(\d+) images/);
+                    if (match) {
+                        processedImages = parseInt(match[1]);
+                        totalImages = parseInt(match[2]);
+                    }
+                    
+                    // Calculate real progress
+                    const realProgress = totalImages > 0 ? (processedImages / totalImages * 100) : 0;
+                    updateProgress(realProgress.toFixed(1), response.data.message);
                     
                     if (response.data.errors && response.data.errors.length > 0) {
                         showErrors(response.data.errors);
@@ -77,11 +110,15 @@
                     
                     if (response.data.completed || shouldStop) {
                         debugLog('Processing completed');
-                        resetUI();
-                        refreshStats();
+                        updateProgress(100, 'Processing complete!');
+                        setTimeout(function() {
+                            resetUI();
+                            refreshStats();
+                        }, 2000);
                     } else {
                         // Continue processing next batch
-                        setTimeout(processAltTags, 1000);
+                        // Add a small delay to see the progress
+                        setTimeout(processAltTags, 500);
                     }
                 } else {
                     debugLog('Error: ' + response.data);
@@ -104,6 +141,8 @@
     function resetUI() {
         isProcessing = false;
         shouldStop = false;
+        processedImages = 0;
+        totalImages = 0;
         $('#alt-tag-progress').hide();
         $('#control-buttons').show();
         $('#stop-processing').hide();
@@ -142,6 +181,11 @@
     function testAPIConnection() {
         debugLog('Testing API connection...');
         
+        // Show loading state on button
+        const $button = $('#test-api');
+        const originalText = $button.text();
+        $button.text('Testing...').prop('disabled', true);
+        
         $.ajax({
             url: autoAltAjax.ajaxurl,
             type: 'POST',
@@ -161,6 +205,10 @@
             error: function(xhr, status, error) {
                 debugLog('API test error: ' + status + ' - ' + error);
                 alert('Connection test failed: ' + error);
+            },
+            complete: function() {
+                // Restore button state
+                $button.text(originalText).prop('disabled', false);
             }
         });
     }
@@ -180,6 +228,7 @@
             
             isProcessing = true;
             shouldStop = false;
+            processedImages = 0;
             
             debugLog('Starting alt tag processing...');
             
@@ -192,8 +241,16 @@
             // Clear debug log
             $('#log-content').empty();
             
-            // Start processing
-            processAltTags();
+            // Get initial stats then start processing
+            getInitialStats(function() {
+                if (totalImages === 0) {
+                    alert('No images need alt tags!');
+                    resetUI();
+                } else {
+                    updateProgress(0, 'Processing ' + totalImages + ' images...');
+                    processAltTags();
+                }
+            });
         });
         
         // Stop processing button
@@ -223,6 +280,13 @@
             } else {
                 $('#debug-log').hide();
             }
+        });
+        
+        // Add some visual feedback when hovering over buttons
+        $('.button').on('mouseenter', function() {
+            $(this).css('opacity', '0.9');
+        }).on('mouseleave', function() {
+            $(this).css('opacity', '1');
         });
     });
 
