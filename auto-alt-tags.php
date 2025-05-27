@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Auto Alt Tag Generator
  * Plugin URI: https://github.com/kahunam/wordpress-auto-alt-tags
- * Description: Automatically generates alt tags for images using Google's Gemini 2.5 Flash API. Includes batch processing, cost optimization, and WP-CLI support.
- * Version: 1.0.1
+ * Description: Automatically generates alt tags for images using Google's Gemini API. Includes batch processing, cost optimization, and WP-CLI support.
+ * Version: 1.1.0
  * Author: Your Name
  * Author URI: https://github.com/kahunam
  * License: GPL v2 or later
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'AUTO_ALT_TAGS_VERSION', '1.0.1' );
+define( 'AUTO_ALT_TAGS_VERSION', '1.1.0' );
 define( 'AUTO_ALT_TAGS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'AUTO_ALT_TAGS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'AUTO_ALT_TAGS_PLUGIN_FILE', __FILE__ );
@@ -51,18 +51,30 @@ class AutoAltTagGenerator {
 	private int $batch_size = 10;
 	
 	/**
-	 * Maximum image size for API calls
+	 * Available Gemini models (as of May 2025)
 	 *
-	 * @var int
+	 * @var array
 	 */
-	private int $max_image_size = 512;
+	private array $available_models = array(
+		'gemini-2.0-flash' => 'Gemini 2.0 Flash (Recommended - Fast & Efficient)',
+		'gemini-1.5-flash' => 'Gemini 1.5 Flash',
+		'gemini-1.5-flash-8b' => 'Gemini 1.5 Flash 8B (Smallest)',
+		'gemini-1.5-pro' => 'Gemini 1.5 Pro (Most Capable)',
+	);
 	
 	/**
 	 * Current Gemini model name
 	 *
 	 * @var string
 	 */
-	private string $model_name = 'gemini-2.5-flash-preview-05-20';
+	private string $model_name = 'gemini-2.0-flash';
+	
+	/**
+	 * Debug mode flag
+	 *
+	 * @var bool
+	 */
+	private bool $debug_mode = false;
 	
 	/**
 	 * Constructor
@@ -71,12 +83,15 @@ class AutoAltTagGenerator {
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 		add_action( 'wp_ajax_process_alt_tags', array( $this, 'ajax_process_alt_tags' ) );
 		add_action( 'wp_ajax_get_image_stats', array( $this, 'ajax_get_image_stats' ) );
+		add_action( 'wp_ajax_test_api_connection', array( $this, 'ajax_test_api_connection' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'plugins_loaded', array( $this, 'load_textdomain' ) );
 		
-		// Get API key from wp_options or wp-config.php
+		// Initialize settings
 		$this->gemini_api_key = defined( 'GEMINI_API_KEY' ) ? GEMINI_API_KEY : get_option( 'auto_alt_gemini_api_key', '' );
+		$this->model_name = get_option( 'auto_alt_model_name', 'gemini-2.0-flash' );
+		$this->debug_mode = (bool) get_option( 'auto_alt_debug_mode', false );
 		
 		// Load WP-CLI command if available
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
@@ -101,6 +116,7 @@ class AutoAltTagGenerator {
 			return;
 		}
 		
+		// Use WordPress default admin styles - no custom CSS needed
 		wp_enqueue_script(
 			'auto-alt-tags-admin',
 			AUTO_ALT_TAGS_PLUGIN_URL . 'assets/js/admin.js',
@@ -113,13 +129,6 @@ class AutoAltTagGenerator {
 			'ajaxurl' => admin_url( 'admin-ajax.php' ),
 			'nonce'   => wp_create_nonce( 'auto_alt_nonce' ),
 		) );
-		
-		wp_enqueue_style(
-			'auto-alt-tags-admin',
-			AUTO_ALT_TAGS_PLUGIN_URL . 'assets/css/admin.css',
-			array(),
-			AUTO_ALT_TAGS_VERSION
-		);
 	}
 	
 	/**
@@ -131,14 +140,24 @@ class AutoAltTagGenerator {
 			'default'           => '',
 		) );
 		
+		register_setting( 'auto_alt_tags_settings', 'auto_alt_model_name', array(
+			'sanitize_callback' => 'sanitize_text_field',
+			'default'           => 'gemini-2.0-flash',
+		) );
+		
 		register_setting( 'auto_alt_tags_settings', 'auto_alt_batch_size', array(
 			'sanitize_callback' => 'absint',
 			'default'           => 10,
 		) );
 		
-		register_setting( 'auto_alt_tags_settings', 'auto_alt_max_image_size', array(
-			'sanitize_callback' => 'absint',
-			'default'           => 512,
+		register_setting( 'auto_alt_tags_settings', 'auto_alt_image_size', array(
+			'sanitize_callback' => 'sanitize_text_field',
+			'default'           => 'medium',
+		) );
+		
+		register_setting( 'auto_alt_tags_settings', 'auto_alt_debug_mode', array(
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => false,
 		) );
 	}
 	
@@ -167,25 +186,32 @@ class AutoAltTagGenerator {
 		// Get statistics
 		$stats = $this->get_image_statistics();
 		?>
-		<div class="wrap auto-alt-tags-admin">
+		<div class="wrap">
 			<h1><?php esc_html_e( 'Auto Alt Tag Generator', 'auto-alt-tags' ); ?></h1>
 			
-			<div class="auto-alt-stats">
-				<div class="stats-grid">
-					<div class="stat-card">
-						<h3><?php echo esc_html( number_format_i18n( $stats['total'] ) ); ?></h3>
+			<!-- Statistics Cards -->
+			<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0;">
+				<div class="card">
+					<div class="inside">
+						<h2><?php echo esc_html( number_format_i18n( $stats['total'] ) ); ?></h2>
 						<p><?php esc_html_e( 'Total Images', 'auto-alt-tags' ); ?></p>
 					</div>
-					<div class="stat-card">
-						<h3><?php echo esc_html( number_format_i18n( $stats['with_alt'] ) ); ?></h3>
+				</div>
+				<div class="card">
+					<div class="inside">
+						<h2><?php echo esc_html( number_format_i18n( $stats['with_alt'] ) ); ?></h2>
 						<p><?php esc_html_e( 'With Alt Tags', 'auto-alt-tags' ); ?></p>
 					</div>
-					<div class="stat-card">
-						<h3><?php echo esc_html( number_format_i18n( $stats['without_alt'] ) ); ?></h3>
+				</div>
+				<div class="card">
+					<div class="inside">
+						<h2><?php echo esc_html( number_format_i18n( $stats['without_alt'] ) ); ?></h2>
 						<p><?php esc_html_e( 'Need Alt Tags', 'auto-alt-tags' ); ?></p>
 					</div>
-					<div class="stat-card">
-						<h3><?php echo esc_html( $stats['percentage'] ); ?>%</h3>
+				</div>
+				<div class="card">
+					<div class="inside">
+						<h2><?php echo esc_html( $stats['percentage'] ); ?>%</h2>
 						<p><?php esc_html_e( 'Coverage', 'auto-alt-tags' ); ?></p>
 					</div>
 				</div>
@@ -197,23 +223,16 @@ class AutoAltTagGenerator {
 				</div>
 			<?php endif; ?>
 			
-			<div class="auto-alt-controls">
-				<div class="control-section">
-					<h2><?php esc_html_e( 'Generate Alt Tags', 'auto-alt-tags' ); ?></h2>
-					
-					<div id="alt-tag-progress" style="display: none;">
-						<div class="progress-container">
-							<div class="progress-bar">
-								<div class="progress-fill" style="width: 0%;"></div>
-							</div>
-							<div class="progress-info">
-								<span id="progress-text"><?php esc_html_e( 'Processing...', 'auto-alt-tags' ); ?></span>
-								<span id="progress-percentage">0%</span>
-							</div>
-						</div>
-						<button id="stop-processing" class="button button-secondary">
-							<?php esc_html_e( 'Stop Processing', 'auto-alt-tags' ); ?>
-						</button>
+			<!-- Processing Section -->
+			<div class="card">
+				<h2 class="title"><?php esc_html_e( 'Generate Alt Tags', 'auto-alt-tags' ); ?></h2>
+				<div class="inside">
+					<div id="alt-tag-progress" style="display: none; margin-bottom: 20px;">
+						<progress id="progress-bar" max="100" value="0" style="width: 100%; height: 20px;"></progress>
+						<p>
+							<span id="progress-text"><?php esc_html_e( 'Processing...', 'auto-alt-tags' ); ?></span>
+							<span id="progress-percentage" style="float: right;">0%</span>
+						</p>
 					</div>
 					
 					<div id="control-buttons">
@@ -221,17 +240,33 @@ class AutoAltTagGenerator {
 							<?php esc_html_e( 'Start Auto-Tagging Images', 'auto-alt-tags' ); ?>
 						</button>
 						
+						<button id="test-api" class="button button-secondary" <?php echo ! $this->gemini_api_key ? 'disabled' : ''; ?>>
+							<?php esc_html_e( 'Test API Connection', 'auto-alt-tags' ); ?>
+						</button>
+						
 						<button id="refresh-stats" class="button button-secondary">
 							<?php esc_html_e( 'Refresh Statistics', 'auto-alt-tags' ); ?>
 						</button>
+						
+						<button id="stop-processing" class="button button-secondary" style="display: none;">
+							<?php esc_html_e( 'Stop Processing', 'auto-alt-tags' ); ?>
+						</button>
 					</div>
 					
-					<div id="processing-log" style="display: none;"></div>
+					<!-- Debug Log Area -->
+					<div id="debug-log" style="display: <?php echo $this->debug_mode ? 'block' : 'none'; ?>; margin-top: 20px;">
+						<h3><?php esc_html_e( 'Debug Log', 'auto-alt-tags' ); ?></h3>
+						<div id="log-content" style="background: #f1f1f1; padding: 10px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px;">
+							<!-- Log messages will appear here -->
+						</div>
+					</div>
 				</div>
-				
-				<div class="settings-section">
-					<h2><?php esc_html_e( 'Settings', 'auto-alt-tags' ); ?></h2>
-					
+			</div>
+			
+			<!-- Settings Section -->
+			<div class="card" style="margin-top: 20px;">
+				<h2 class="title"><?php esc_html_e( 'Settings', 'auto-alt-tags' ); ?></h2>
+				<div class="inside">
 					<form method="post" action="options.php">
 						<?php settings_fields( 'auto_alt_tags_settings' ); ?>
 						
@@ -252,9 +287,27 @@ class AutoAltTagGenerator {
 										printf(
 											/* translators: %s: URL to Google AI Studio */
 											esc_html__( 'Get your API key from %s', 'auto-alt-tags' ),
-											'<a href="https://ai.google.dev/" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Google AI Studio', 'auto-alt-tags' ) . '</a>'
+											'<a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Google AI Studio', 'auto-alt-tags' ) . '</a>'
 										);
 										?>
+									</p>
+								</td>
+							</tr>
+							
+							<tr>
+								<th scope="row">
+									<label for="auto_alt_model_name"><?php esc_html_e( 'Gemini Model', 'auto-alt-tags' ); ?></label>
+								</th>
+								<td>
+									<select id="auto_alt_model_name" name="auto_alt_model_name">
+										<?php foreach ( $this->available_models as $model => $description ) : ?>
+											<option value="<?php echo esc_attr( $model ); ?>" <?php selected( get_option( 'auto_alt_model_name', 'gemini-2.0-flash' ), $model ); ?>>
+												<?php echo esc_html( $description ); ?>
+											</option>
+										<?php endforeach; ?>
+									</select>
+									<p class="description">
+										<?php esc_html_e( 'Choose the Gemini model to use for generating alt text', 'auto-alt-tags' ); ?>
 									</p>
 								</td>
 							</tr>
@@ -279,19 +332,41 @@ class AutoAltTagGenerator {
 							
 							<tr>
 								<th scope="row">
-									<label for="auto_alt_max_image_size"><?php esc_html_e( 'Max Image Size (px)', 'auto-alt-tags' ); ?></label>
+									<label for="auto_alt_image_size"><?php esc_html_e( 'Image Size for API', 'auto-alt-tags' ); ?></label>
 								</th>
 								<td>
-									<input type="number" 
-										   id="auto_alt_max_image_size" 
-										   name="auto_alt_max_image_size" 
-										   value="<?php echo esc_attr( get_option( 'auto_alt_max_image_size', 512 ) ); ?>" 
-										   min="256" 
-										   max="2048" 
-										   step="256" 
-										   class="small-text" />
+									<select id="auto_alt_image_size" name="auto_alt_image_size">
+										<?php
+										$sizes = get_intermediate_image_sizes();
+										$selected_size = get_option( 'auto_alt_image_size', 'medium' );
+										foreach ( $sizes as $size ) :
+											?>
+											<option value="<?php echo esc_attr( $size ); ?>" <?php selected( $selected_size, $size ); ?>>
+												<?php echo esc_html( ucfirst( str_replace( '-', ' ', $size ) ) ); ?>
+											</option>
+										<?php endforeach; ?>
+									</select>
 									<p class="description">
-										<?php esc_html_e( 'Maximum image size sent to API (smaller = lower costs)', 'auto-alt-tags' ); ?>
+										<?php esc_html_e( 'Use existing WordPress thumbnail size for API calls (smaller = lower costs)', 'auto-alt-tags' ); ?>
+									</p>
+								</td>
+							</tr>
+							
+							<tr>
+								<th scope="row">
+									<label for="auto_alt_debug_mode"><?php esc_html_e( 'Debug Mode', 'auto-alt-tags' ); ?></label>
+								</th>
+								<td>
+									<label for="auto_alt_debug_mode">
+										<input type="checkbox" 
+											   id="auto_alt_debug_mode" 
+											   name="auto_alt_debug_mode" 
+											   value="1" 
+											   <?php checked( get_option( 'auto_alt_debug_mode', false ) ); ?> />
+										<?php esc_html_e( 'Enable debug logging', 'auto-alt-tags' ); ?>
+									</label>
+									<p class="description">
+										<?php esc_html_e( 'Show detailed logs for troubleshooting API issues', 'auto-alt-tags' ); ?>
 									</p>
 								</td>
 							</tr>
@@ -303,6 +378,85 @@ class AutoAltTagGenerator {
 			</div>
 		</div>
 		<?php
+	}
+	
+	/**
+	 * AJAX handler for testing API connection
+	 */
+	public function ajax_test_api_connection(): void {
+		// Verify nonce for security
+		if ( ! check_ajax_referer( 'auto_alt_nonce', 'nonce', false ) ) {
+			wp_send_json_error( __( 'Security check failed', 'auto-alt-tags' ) );
+		}
+		
+		// Check user capabilities
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Unauthorized access', 'auto-alt-tags' ) );
+		}
+		
+		// Check API key
+		if ( empty( $this->gemini_api_key ) ) {
+			wp_send_json_error( __( 'Gemini API key not configured', 'auto-alt-tags' ) );
+		}
+		
+		$this->debug_log( 'Testing API connection...' );
+		
+		// Test API with a simple text prompt
+		$api_url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $this->model_name . ':generateContent?key=' . $this->gemini_api_key;
+		
+		$payload = array(
+			'contents' => array(
+				array(
+					'parts' => array(
+						array(
+							'text' => 'Say "Hello, API is working!" in exactly 5 words.',
+						),
+					),
+				),
+			),
+			'generationConfig' => array(
+				'maxOutputTokens' => 20,
+				'temperature'     => 0.1,
+			),
+		);
+		
+		$this->debug_log( 'API URL: ' . $api_url );
+		$this->debug_log( 'Using model: ' . $this->model_name );
+		
+		$response = wp_remote_post( $api_url, array(
+			'headers' => array(
+				'Content-Type' => 'application/json',
+			),
+			'body'    => wp_json_encode( $payload ),
+			'timeout' => 30,
+		) );
+		
+		if ( is_wp_error( $response ) ) {
+			$error_message = $response->get_error_message();
+			$this->debug_log( 'API test failed: ' . $error_message );
+			wp_send_json_error( sprintf( __( 'Connection failed: %s', 'auto-alt-tags' ), $error_message ) );
+		}
+		
+		$response_code = wp_remote_retrieve_response_code( $response );
+		$body = wp_remote_retrieve_body( $response );
+		$data = json_decode( $body, true );
+		
+		$this->debug_log( 'Response code: ' . $response_code );
+		$this->debug_log( 'Response body: ' . $body );
+		
+		if ( 200 !== $response_code ) {
+			$error_msg = isset( $data['error']['message'] ) ? $data['error']['message'] : __( 'Unknown error', 'auto-alt-tags' );
+			wp_send_json_error( sprintf( __( 'API Error (%d): %s', 'auto-alt-tags' ), $response_code, $error_msg ) );
+		}
+		
+		if ( isset( $data['candidates'][0]['content']['parts'][0]['text'] ) ) {
+			wp_send_json_success( array(
+				'message' => __( 'API connection successful!', 'auto-alt-tags' ),
+				'response' => $data['candidates'][0]['content']['parts'][0]['text'],
+			) );
+		} else {
+			wp_send_json_error( __( 'Unexpected API response format', 'auto-alt-tags' ) );
+		}
 	}
 	
 	/**
@@ -324,9 +478,13 @@ class AutoAltTagGenerator {
 			wp_send_json_error( __( 'Gemini API key not configured', 'auto-alt-tags' ) );
 		}
 		
+		$this->debug_log( 'Starting alt tag processing...' );
+		
 		// Get images without alt text
 		$images_without_alt = $this->get_images_without_alt();
 		$total_images = count( $images_without_alt );
+		
+		$this->debug_log( sprintf( 'Found %d images without alt text', $total_images ) );
 		
 		if ( 0 === $total_images ) {
 			wp_send_json_success( array(
@@ -344,6 +502,7 @@ class AutoAltTagGenerator {
 		if ( empty( $batch ) ) {
 			// Processing complete
 			delete_transient( 'auto_alt_offset' );
+			$this->debug_log( 'Processing complete!' );
 			wp_send_json_success( array(
 				'completed' => true,
 				'message'   => __( 'All images processed', 'auto-alt-tags' ),
@@ -356,16 +515,20 @@ class AutoAltTagGenerator {
 		$errors = array();
 		
 		foreach ( $batch as $attachment_id ) {
+			$this->debug_log( sprintf( 'Processing image ID: %d', $attachment_id ) );
 			$result = $this->generate_alt_tag( (int) $attachment_id );
 			if ( $result['success'] ) {
 				$processed++;
+				$this->debug_log( sprintf( 'Success: %s', $result['alt_text'] ) );
 			} else {
-				$errors[] = sprintf(
+				$error_msg = sprintf(
 					/* translators: %1$d: Image ID, %2$s: Error message */
 					__( 'Image ID %1$d: %2$s', 'auto-alt-tags' ), 
 					$attachment_id, 
 					$result['error']
 				);
+				$errors[] = $error_msg;
+				$this->debug_log( sprintf( 'Error: %s', $result['error'] ) );
 			}
 		}
 		
@@ -379,7 +542,7 @@ class AutoAltTagGenerator {
 		wp_send_json_success( array(
 			'completed' => $new_offset >= $total_images,
 			'message'   => sprintf(
-				/* translators: %1$d: Processed count, %2$d: New offset, %3$d: Total images, %4$d: Success count */
+				/* translators: %1$d: Processed count, %2$d: Total count, %3$d: Success count */
 				__( 'Processed %1$d/%2$d images. %3$d successful.', 'auto-alt-tags' ),
 				min( $new_offset, $total_images ),
 				$total_images,
@@ -485,23 +648,38 @@ class AutoAltTagGenerator {
 	 */
 	private function generate_alt_tag( int $attachment_id ): array {
 		try {
-			// Get image URL and create smaller version
-			$resized_image = $this->create_small_image( $attachment_id );
+			// Get image URL using WordPress built-in sizes
+			$image_size = get_option( 'auto_alt_image_size', 'medium' );
+			$image_data = wp_get_attachment_image_src( $attachment_id, $image_size );
 			
-			if ( ! $resized_image ) {
+			if ( ! $image_data ) {
 				return array(
 					'success' => false,
-					'error'   => __( 'Failed to create resized image', 'auto-alt-tags' ),
+					'error'   => __( 'Failed to get image URL', 'auto-alt-tags' ),
+				);
+			}
+			
+			$image_url = $image_data[0];
+			$this->debug_log( sprintf( 'Using image URL: %s', $image_url ) );
+			
+			// Get image file path
+			$upload_dir = wp_upload_dir();
+			$image_path = str_replace( $upload_dir['baseurl'], $upload_dir['basedir'], $image_url );
+			
+			if ( ! file_exists( $image_path ) ) {
+				// Try to get the original file if sized version doesn't exist
+				$image_path = get_attached_file( $attachment_id );
+			}
+			
+			if ( ! $image_path || ! file_exists( $image_path ) ) {
+				return array(
+					'success' => false,
+					'error'   => __( 'Image file not found', 'auto-alt-tags' ),
 				);
 			}
 			
 			// Call Gemini API
-			$alt_text = $this->call_gemini_api( $resized_image );
-			
-			// Clean up temporary file
-			if ( file_exists( $resized_image ) ) {
-				wp_delete_file( $resized_image );
-			}
+			$alt_text = $this->call_gemini_api( $image_path );
 			
 			if ( ! $alt_text ) {
 				return array(
@@ -527,47 +705,6 @@ class AutoAltTagGenerator {
 	}
 	
 	/**
-	 * Create a smaller version of an image for API calls
-	 *
-	 * @param int $attachment_id Attachment ID.
-	 * @return string|false Path to temporary file or false on failure
-	 */
-	private function create_small_image( int $attachment_id ) {
-		$image_path = get_attached_file( $attachment_id );
-		
-		if ( ! $image_path || ! file_exists( $image_path ) ) {
-			return false;
-		}
-		
-		$image_editor = wp_get_image_editor( $image_path );
-		
-		if ( is_wp_error( $image_editor ) ) {
-			return false;
-		}
-		
-		$current_size = $image_editor->get_size();
-		$max_size = get_option( 'auto_alt_max_image_size', $this->max_image_size );
-		
-		// Only resize if larger than max_size
-		if ( $current_size['width'] > $max_size || $current_size['height'] > $max_size ) {
-			$image_editor->resize( $max_size, $max_size, false );
-		}
-		
-		// Create temporary file
-		$temp_file = wp_tempnam( 'auto-alt-' );
-		$temp_file .= '.jpg';
-		
-		// Save resized image
-		$saved = $image_editor->save( $temp_file, 'image/jpeg' );
-		
-		if ( is_wp_error( $saved ) ) {
-			return false;
-		}
-		
-		return $temp_file;
-	}
-	
-	/**
 	 * Call Gemini API to generate alt text
 	 *
 	 * @param string $image_path Path to image file.
@@ -575,20 +712,25 @@ class AutoAltTagGenerator {
 	 */
 	private function call_gemini_api( string $image_path ) {
 		if ( empty( $this->gemini_api_key ) ) {
-			error_log( 'Auto Alt Tags: Gemini API key not configured' );
+			$this->debug_log( 'Gemini API key not configured' );
 			return false;
 		}
 		
-		// Convert image to base64
+		// Read and encode image
 		$image_data = file_get_contents( $image_path );
 		if ( false === $image_data ) {
+			$this->debug_log( 'Failed to read image file' );
 			return false;
 		}
 		
 		$base64_image = base64_encode( $image_data );
+		$mime_type = wp_check_filetype( $image_path )['type'] ?: 'image/jpeg';
 		
-		// Use current Gemini 2.5 Flash model
-		$api_url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $this->model_name . ':generateContent?key=' . $this->gemini_api_key;
+		// Use the selected model
+		$model = get_option( 'auto_alt_model_name', 'gemini-2.0-flash' );
+		$api_url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent?key=' . $this->gemini_api_key;
+		
+		$this->debug_log( sprintf( 'Calling Gemini API with model: %s', $model ) );
 		
 		$payload = array(
 			'contents' => array(
@@ -599,7 +741,7 @@ class AutoAltTagGenerator {
 						),
 						array(
 							'inline_data' => array(
-								'mime_type' => 'image/jpeg',
+								'mime_type' => $mime_type,
 								'data'      => $base64_image,
 							),
 						),
@@ -621,19 +763,55 @@ class AutoAltTagGenerator {
 		) );
 		
 		if ( is_wp_error( $response ) ) {
-			error_log( 'Auto Alt Tags: Gemini API request failed: ' . $response->get_error_message() );
+			$this->debug_log( 'API request failed: ' . $response->get_error_message() );
 			return false;
 		}
 		
+		$response_code = wp_remote_retrieve_response_code( $response );
 		$body = wp_remote_retrieve_body( $response );
 		$data = json_decode( $body, true );
 		
-		if ( isset( $data['candidates'][0]['content']['parts'][0]['text'] ) ) {
-			return trim( $data['candidates'][0]['content']['parts'][0]['text'] );
+		$this->debug_log( sprintf( 'API response code: %d', $response_code ) );
+		
+		if ( 200 !== $response_code ) {
+			$error_msg = isset( $data['error']['message'] ) ? $data['error']['message'] : 'Unknown error';
+			$this->debug_log( sprintf( 'API error: %s', $error_msg ) );
+			return false;
 		}
 		
-		error_log( 'Auto Alt Tags: Unexpected Gemini API response: ' . $body );
+		if ( isset( $data['candidates'][0]['content']['parts'][0]['text'] ) ) {
+			$alt_text = trim( $data['candidates'][0]['content']['parts'][0]['text'] );
+			$this->debug_log( sprintf( 'Generated alt text: %s', $alt_text ) );
+			return $alt_text;
+		}
+		
+		$this->debug_log( 'Unexpected API response format: ' . $body );
 		return false;
+	}
+	
+	/**
+	 * Debug logging helper
+	 *
+	 * @param string $message Log message.
+	 */
+	private function debug_log( string $message ): void {
+		if ( ! $this->debug_mode ) {
+			return;
+		}
+		
+		// Log to PHP error log
+		error_log( '[Auto Alt Tags] ' . $message );
+		
+		// Also store in transient for display in admin
+		$logs = get_transient( 'auto_alt_debug_logs' ) ?: array();
+		$logs[] = date( 'Y-m-d H:i:s' ) . ' - ' . $message;
+		
+		// Keep only last 100 log entries
+		if ( count( $logs ) > 100 ) {
+			$logs = array_slice( $logs, -100 );
+		}
+		
+		set_transient( 'auto_alt_debug_logs', $logs, HOUR_IN_SECONDS );
 	}
 }
 
@@ -644,11 +822,14 @@ new AutoAltTagGenerator();
 register_activation_hook( __FILE__, function () {
 	// Create any necessary database tables or options here
 	add_option( 'auto_alt_batch_size', 10 );
-	add_option( 'auto_alt_max_image_size', 512 );
+	add_option( 'auto_alt_image_size', 'medium' );
+	add_option( 'auto_alt_model_name', 'gemini-2.0-flash' );
+	add_option( 'auto_alt_debug_mode', false );
 } );
 
 // Deactivation hook
 register_deactivation_hook( __FILE__, function () {
 	// Clean up transients
 	delete_transient( 'auto_alt_offset' );
+	delete_transient( 'auto_alt_debug_logs' );
 } );
