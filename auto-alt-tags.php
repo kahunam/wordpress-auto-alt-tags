@@ -3,7 +3,7 @@
  * Plugin Name: Auto Alt Tag Generator
  * Plugin URI: https://github.com/kahunam/wordpress-auto-alt-tags
  * Description: Automatically generates alt tags for images using Google's Gemini API. Includes batch processing, cost optimization, and WP-CLI support.
- * Version: 1.1.1
+ * Version: 1.1.2
  * Author: Kahunam
  * Author URI: https://github.com/kahunam
  * License: GPL v2 or later
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'AUTO_ALT_TAGS_VERSION', '1.1.1' );
+define( 'AUTO_ALT_TAGS_VERSION', '1.1.2' );
 define( 'AUTO_ALT_TAGS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'AUTO_ALT_TAGS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'AUTO_ALT_TAGS_PLUGIN_FILE', __FILE__ );
@@ -81,7 +81,7 @@ class AutoAltTagGenerator {
 	 *
 	 * @var string
 	 */
-	private string $default_prompt = 'Generate a concise, descriptive alt text for this image. Focus on the main subject and important details. Keep it under 125 characters and avoid phrases like "image of" or "picture of". Be specific and helpful for screen readers.';
+	private string $default_prompt = 'You are an accessibility expert. Generate ONLY the alt text for this image - no explanations, no options, just the final alt text. Describe what is shown objectively. For people, describe only their actions, clothing, or position - never mention age, attractiveness, weight, or other physical attributes that could be considered judgmental. Keep it under 125 characters. Do not include phrases like "image of" or "picture of". Return only the alt text string, nothing else.';
 	
 	/**
 	 * Constructor
@@ -375,7 +375,7 @@ class AutoAltTagGenerator {
 											  class="large-text"
 											  placeholder="<?php echo esc_attr( $this->default_prompt ); ?>"><?php echo esc_textarea( get_option( 'auto_alt_custom_prompt', '' ) ); ?></textarea>
 									<p class="description">
-										<?php esc_html_e( 'Override the default prompt for generating alt text. Leave empty to use the default prompt. Keep it focused on accessibility and under 125 characters.', 'auto-alt-tags' ); ?>
+										<?php esc_html_e( 'Override the default prompt for generating alt text. Leave empty to use the default prompt. The prompt should instruct the AI to return only the alt text, avoid subjective descriptions of people, and keep it under 125 characters.', 'auto-alt-tags' ); ?>
 									</p>
 								</td>
 							</tr>
@@ -437,14 +437,14 @@ class AutoAltTagGenerator {
 				array(
 					'parts' => array(
 						array(
-							'text' => 'Say "Hello, API is working!" in exactly 5 words.',
+							'text' => 'Respond with exactly these 5 words: "Hello, API is working correctly"',
 						),
 					),
 				),
 			),
 			'generationConfig' => array(
-				'maxOutputTokens' => 20,
-				'temperature'     => 0.1,
+				'maxOutputTokens' => 10,
+				'temperature'     => 0,
 			),
 		);
 		
@@ -716,6 +716,10 @@ class AutoAltTagGenerator {
 				);
 			}
 			
+			// Clean up the alt text - remove any leading/trailing quotes or asterisks
+			$alt_text = trim( $alt_text, '"\'*' );
+			$alt_text = preg_replace( '/^\*+|\*+$/', '', $alt_text );
+			
 			// Save alt text
 			update_post_meta( $attachment_id, '_wp_attachment_image_alt', sanitize_text_field( $alt_text ) );
 			
@@ -783,7 +787,7 @@ class AutoAltTagGenerator {
 			),
 			'generationConfig' => array(
 				'maxOutputTokens' => 50,
-				'temperature'     => 0.3,
+				'temperature'     => 0.1,
 			),
 		);
 		
