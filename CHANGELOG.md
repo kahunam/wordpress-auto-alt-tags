@@ -4,6 +4,57 @@ All notable changes to the Auto Alt Tags plugin will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-05-27
+
+### Added
+- **Debug Mode** - Built-in debugging with real-time logs for troubleshooting
+  - Toggle in settings to enable/disable debug logging
+  - Real-time log display in admin interface
+  - Detailed API request and response logging
+  - Error tracking with timestamps
+- **API Test Button** - Test your API connection before processing images
+  - Verifies API key validity
+  - Checks model availability
+  - Displays test response
+- **Model Selection** - Choose from available Gemini models
+  - Gemini 2.0 Flash (recommended)
+  - Gemini 1.5 Flash
+  - Gemini 1.5 Flash 8B (smallest)
+  - Gemini 1.5 Pro (most capable)
+- **WordPress Thumbnail Support** - Use existing WordPress image sizes
+  - Dropdown to select from registered image sizes
+  - Eliminates custom image resizing code
+  - Significant cost savings by using smaller images
+
+### Changed
+- **Updated API Models** - Migrated from non-existent models to valid ones
+  - Removed: `gemini-2.5-flash-preview-05-20` (doesn't exist)
+  - Default: `gemini-2.0-flash` (current recommended model)
+- **Improved UI** - Now uses WordPress default admin components
+  - Removed all custom CSS requirements
+  - Uses native WordPress `.card` components
+  - Standard WordPress buttons and form tables
+  - Native progress element for better compatibility
+- **Better Error Handling** - Enhanced error messages and debugging
+  - More descriptive error messages
+  - API response code logging
+  - Detailed debug information when enabled
+
+### Fixed
+- **API Request Issues** - Fixed model endpoint and authentication
+  - Corrected API URL structure
+  - Proper v1beta endpoint usage
+  - Valid model names
+- **Dependencies** - Removed unnecessary custom code
+  - No longer uses `wp_get_image_editor()` for resizing
+  - Uses `wp_get_attachment_image_src()` for thumbnails
+  - Cleaner, more maintainable codebase
+
+### Security
+- Enhanced input validation and sanitization
+- Improved nonce verification
+- Better error logging without exposing sensitive data
+
 ## [1.0.1] - 2025-05-26
 
 ### 🚀 Updated to 2025 Standards
@@ -140,6 +191,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ---
 
 ## 🔄 Migration Notes
+
+### Upgrading from 1.0.1 to 1.1.0
+- **No breaking changes** - the update is fully backward compatible
+- **Model change**: The default model has changed from the non-existent `gemini-2.5-flash-preview-05-20` to `gemini-2.0-flash`
+- **Settings update**: Visit the settings page to select your preferred model
+- **UI improvements**: Custom CSS is no longer needed and can be removed
 
 ### Upgrading from 1.0.0 to 1.0.1
 - **No breaking changes** - the update is fully backward compatible
