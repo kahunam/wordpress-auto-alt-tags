@@ -1,360 +1,229 @@
 /**
- * Admin JavaScript for Auto Alt Tags Plugin
+ * Auto Alt Tags Admin JavaScript
+ * 
+ * @package AutoAltTags
+ * @since 1.1.0
  */
 
 (function($) {
     'use strict';
 
-    let processing = false;
-    let stopped = false;
-    let processedCount = 0;
-    let totalCount = 0;
-    let currentBatch = 0;
+    let isProcessing = false;
+    let shouldStop = false;
 
-    $(document).ready(function() {
-        initializeAdmin();
-    });
-
-    function initializeAdmin() {
-        bindEvents();
-        updateButtonStates();
+    /**
+     * Log debug message to console and UI
+     */
+    function debugLog(message) {
+        console.log('[Auto Alt Tags]', message);
+        
+        const logContent = $('#log-content');
+        if (logContent.length) {
+            const timestamp = new Date().toLocaleTimeString();
+            logContent.append(`<div>${timestamp} - ${message}</div>`);
+            logContent.scrollTop(logContent[0].scrollHeight);
+        }
     }
 
-    function bindEvents() {
-        $('#start-processing').on('click', startProcessing);
-        $('#stop-processing').on('click', stopProcessing);
-        $('#refresh-stats').on('click', refreshStats);
+    /**
+     * Update progress bar
+     */
+    function updateProgress(percentage, message) {
+        $('#progress-bar').val(percentage);
+        $('#progress-percentage').text(percentage + '%');
+        $('#progress-text').text(message);
+    }
+
+    /**
+     * Show error messages
+     */
+    function showErrors(errors) {
+        if (!errors || errors.length === 0) return;
         
-        // Prevent form submission during processing
-        $('form').on('submit', function(e) {
-            if (processing) {
-                e.preventDefault();
-                showNotice('Please wait for processing to complete before changing settings.', 'warning');
-                return false;
-            }
+        const logContent = $('#log-content');
+        errors.forEach(function(error) {
+            debugLog('ERROR: ' + error);
         });
-
-        // Auto-refresh stats periodically when not processing
-        setInterval(function() {
-            if (!processing) {
-                refreshStats(true); // Silent refresh
-            }
-        }, 30000); // Every 30 seconds
     }
 
-    function startProcessing() {
-        if (processing) return;
-        
-        processing = true;
-        stopped = false;
-        processedCount = 0;
-        totalCount = 0;
-        currentBatch = 0;
-        
-        updateButtonStates();
-        showProgressSection();
-        clearLog();
-        
-        logMessage('Starting auto-tagging process...', 'info');
-        
-        processNextBatch();
-    }
-
-    function stopProcessing() {
-        if (!processing) return;
-        
-        stopped = true;
-        logMessage('Stopping processing after current batch...', 'info');
-        updateProgressText('Stopping...');
-        
-        // Update button states
-        $('#stop-processing').prop('disabled', true).text('Stopping...');
-    }
-
-    function processNextBatch() {
-        if (stopped) {
-            finishProcessing('Processing stopped by user.');
+    /**
+     * Process alt tags batch by batch
+     */
+    function processAltTags() {
+        if (shouldStop) {
+            debugLog('Processing stopped by user');
+            resetUI();
             return;
         }
 
-        currentBatch++;
+        debugLog('Sending request to process batch...');
         
         $.ajax({
             url: autoAltAjax.ajaxurl,
-            method: 'POST',
+            type: 'POST',
             data: {
                 action: 'process_alt_tags',
                 nonce: autoAltAjax.nonce
             },
-            timeout: 60000, // 60 second timeout
             success: function(response) {
+                debugLog('Response received: ' + JSON.stringify(response));
+                
                 if (response.success) {
-                    handleBatchSuccess(response.data);
+                    updateProgress(response.data.progress, response.data.message);
+                    
+                    if (response.data.errors && response.data.errors.length > 0) {
+                        showErrors(response.data.errors);
+                    }
+                    
+                    if (response.data.completed || shouldStop) {
+                        debugLog('Processing completed');
+                        resetUI();
+                        refreshStats();
+                    } else {
+                        // Continue processing next batch
+                        setTimeout(processAltTags, 1000);
+                    }
                 } else {
-                    handleBatchError(response.data || 'Unknown error occurred');
+                    debugLog('Error: ' + response.data);
+                    alert('Error: ' + response.data);
+                    resetUI();
                 }
             },
             error: function(xhr, status, error) {
-                let errorMessage = 'Request failed: ';
-                if (status === 'timeout') {
-                    errorMessage += 'Request timed out. Try reducing batch size.';
-                } else {
-                    errorMessage += error || 'Unknown error';
-                }
-                handleBatchError(errorMessage);
+                debugLog('AJAX error: ' + status + ' - ' + error);
+                debugLog('Response: ' + xhr.responseText);
+                alert('Error processing images: ' + error);
+                resetUI();
             }
         });
     }
 
-    function handleBatchSuccess(data) {
-        // Update progress
-        updateProgress(data.progress, data.message);
-        
-        // Log any errors from this batch
-        if (data.errors && data.errors.length > 0) {
-            data.errors.forEach(function(error) {
-                logMessage(error, 'error');
-            });
-        }
-        
-        // Log batch completion
-        logMessage(`Batch ${currentBatch} completed: ${data.message}`, 'success');
-        
-        if (data.completed || stopped) {
-            finishProcessing(data.message);
-        } else {
-            // Continue with next batch after a small delay
-            setTimeout(function() {
-                if (!stopped) {
-                    processNextBatch();
-                }
-            }, 1000);
-        }
-    }
-
-    function handleBatchError(errorMessage) {
-        logMessage('Error: ' + errorMessage, 'error');
-        finishProcessing('Processing failed due to an error.');
-    }
-
-    function finishProcessing(message) {
-        processing = false;
-        stopped = false;
-        
-        updateButtonStates();
-        logMessage('Processing completed: ' + message, 'info');
-        
-        // Show final result
-        showNotice(message, 'success');
-        
-        // Refresh stats to show updated numbers
-        setTimeout(function() {
-            refreshStats();
-        }, 1000);
-    }
-
-    function updateProgress(percentage, message) {
-        $('.progress-fill').css('width', percentage + '%');
-        $('#progress-percentage').text(Math.round(percentage) + '%');
-        updateProgressText(message);
-    }
-
-    function updateProgressText(text) {
-        $('#progress-text').text(text);
-    }
-
-    function showProgressSection() {
-        $('#alt-tag-progress').show();
-        $('#control-buttons').hide();
-    }
-
-    function hideProgressSection() {
+    /**
+     * Reset UI after processing
+     */
+    function resetUI() {
+        isProcessing = false;
+        shouldStop = false;
         $('#alt-tag-progress').hide();
         $('#control-buttons').show();
+        $('#stop-processing').hide();
+        $('#start-processing').show();
     }
 
-    function updateButtonStates() {
-        if (processing) {
-            $('#start-processing').prop('disabled', true);
-            $('#stop-processing').prop('disabled', false);
-            $('#refresh-stats').prop('disabled', true);
-            
-            // Add loading spinner to start button
-            $('#start-processing').html('<span class="loading-spinner"></span>Processing...');
-        } else {
-            $('#start-processing').prop('disabled', false);
-            $('#stop-processing').prop('disabled', true);
-            $('#refresh-stats').prop('disabled', false);
-            
-            // Remove loading spinner
-            $('#start-processing').html('🚀 Start Auto-Tagging Images');
-            $('#stop-processing').text('⏹️ Stop Processing');
-            
-            hideProgressSection();
-        }
-    }
-
-    function refreshStats(silent = false) {
-        if (!silent) {
-            $('#refresh-stats').prop('disabled', true).html('<span class="loading-spinner"></span>Refreshing...');
-        }
+    /**
+     * Refresh statistics
+     */
+    function refreshStats() {
+        debugLog('Refreshing statistics...');
         
         $.ajax({
             url: autoAltAjax.ajaxurl,
-            method: 'POST',
+            type: 'POST',
             data: {
                 action: 'get_image_stats',
                 nonce: autoAltAjax.nonce
             },
             success: function(response) {
                 if (response.success) {
-                    updateStatsDisplay(response.data);
-                    if (!silent) {
-                        showNotice('Statistics refreshed successfully.', 'success', 3000);
-                    }
-                } else {
-                    if (!silent) {
-                        showNotice('Failed to refresh statistics.', 'error');
-                    }
+                    debugLog('Statistics updated');
+                    // Reload page to show updated stats
+                    location.reload();
                 }
             },
-            error: function() {
-                if (!silent) {
-                    showNotice('Failed to refresh statistics.', 'error');
-                }
-            },
-            complete: function() {
-                if (!silent) {
-                    $('#refresh-stats').prop('disabled', false).html('🔄 Refresh Statistics');
-                }
+            error: function(xhr, status, error) {
+                debugLog('Failed to refresh stats: ' + error);
             }
         });
     }
 
-    function updateStatsDisplay(stats) {
-        $('.stat-card').eq(0).find('h3').text(formatNumber(stats.total));
-        $('.stat-card').eq(1).find('h3').text(formatNumber(stats.with_alt));
-        $('.stat-card').eq(2).find('h3').text(formatNumber(stats.without_alt));
-        $('.stat-card').eq(3).find('h3').text(stats.percentage + '%');
+    /**
+     * Test API connection
+     */
+    function testAPIConnection() {
+        debugLog('Testing API connection...');
         
-        // Update button state based on images needing alt tags
-        if (stats.without_alt === 0) {
-            $('#start-processing').prop('disabled', true).text('✅ All images have alt tags');
-        } else if (!processing) {
-            $('#start-processing').prop('disabled', false).html('🚀 Start Auto-Tagging Images');
-        }
-    }
-
-    function formatNumber(num) {
-        return new Intl.NumberFormat().format(num);
-    }
-
-    function logMessage(message, type = 'info') {
-        const timestamp = new Date().toLocaleTimeString();
-        const logEntry = $(`<div class="log-entry ${type}">[${timestamp}] ${message}</div>`);
-        
-        $('#processing-log').append(logEntry);
-        
-        // Scroll to bottom
-        const logContainer = $('#processing-log')[0];
-        if (logContainer) {
-            logContainer.scrollTop = logContainer.scrollHeight;
-        }
-        
-        // Limit log entries to prevent memory issues
-        const maxEntries = 100;
-        const entries = $('#processing-log .log-entry');
-        if (entries.length > maxEntries) {
-            entries.slice(0, entries.length - maxEntries).remove();
-        }
-    }
-
-    function clearLog() {
-        $('#processing-log').empty();
-    }
-
-    function showNotice(message, type = 'info', autoHide = 5000) {
-        // Remove existing notices
-        $('.auto-alt-notice').remove();
-        
-        const notice = $(`
-            <div class="auto-alt-notice ${type}">
-                <p>${message}</p>
-            </div>
-        `);
-        
-        $('.auto-alt-tags-admin h1').after(notice);
-        
-        // Auto-hide notice
-        if (autoHide > 0) {
-            setTimeout(function() {
-                notice.fadeOut(300, function() {
-                    $(this).remove();
-                });
-            }, autoHide);
-        }
-    }
-
-    // Utility function to handle page visibility changes
-    // Pause processing when tab is not visible to save resources
-    document.addEventListener('visibilitychange', function() {
-        if (document.hidden && processing) {
-            logMessage('Tab hidden - processing continues in background', 'info');
-        } else if (!document.hidden && processing) {
-            logMessage('Tab visible - processing resumed', 'info');
-        }
-    });
-
-    // Handle beforeunload event to warn about ongoing processing
-    window.addEventListener('beforeunload', function(e) {
-        if (processing) {
-            const message = 'Image processing is still in progress. Are you sure you want to leave?';
-            e.preventDefault();
-            e.returnValue = message;
-            return message;
-        }
-    });
-
-    // Keyboard shortcuts
-    $(document).on('keydown', function(e) {
-        // Only when not in an input field
-        if ($(e.target).is('input, textarea, select')) {
-            return;
-        }
-        
-        // Ctrl/Cmd + Enter to start processing
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-            e.preventDefault();
-            if (!processing) {
-                startProcessing();
+        $.ajax({
+            url: autoAltAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'test_api_connection',
+                nonce: autoAltAjax.nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    debugLog('API test successful: ' + response.data.response);
+                    alert(response.data.message + '\n\nAPI Response: ' + response.data.response);
+                } else {
+                    debugLog('API test failed: ' + response.data);
+                    alert('API Test Failed: ' + response.data);
+                }
+            },
+            error: function(xhr, status, error) {
+                debugLog('API test error: ' + status + ' - ' + error);
+                alert('Connection test failed: ' + error);
             }
-        }
+        });
+    }
+
+    // Document ready
+    $(document).ready(function() {
         
-        // Escape to stop processing
-        if (e.key === 'Escape' && processing) {
+        // Start processing button
+        $('#start-processing').on('click', function(e) {
             e.preventDefault();
-            stopProcessing();
-        }
+            
+            if (isProcessing) return;
+            
+            if (!confirm('This will generate alt tags for all images without them. Continue?')) {
+                return;
+            }
+            
+            isProcessing = true;
+            shouldStop = false;
+            
+            debugLog('Starting alt tag processing...');
+            
+            $('#control-buttons').hide();
+            $('#alt-tag-progress').show();
+            $('#stop-processing').show();
+            $('#start-processing').hide();
+            updateProgress(0, 'Starting...');
+            
+            // Clear debug log
+            $('#log-content').empty();
+            
+            // Start processing
+            processAltTags();
+        });
         
-        // R to refresh stats
-        if (e.key === 'r' && !processing) {
+        // Stop processing button
+        $('#stop-processing').on('click', function(e) {
+            e.preventDefault();
+            shouldStop = true;
+            debugLog('Stop requested by user');
+            $(this).text('Stopping...');
+        });
+        
+        // Test API button
+        $('#test-api').on('click', function(e) {
+            e.preventDefault();
+            testAPIConnection();
+        });
+        
+        // Refresh stats button
+        $('#refresh-stats').on('click', function(e) {
             e.preventDefault();
             refreshStats();
-        }
+        });
+        
+        // Toggle debug log visibility when debug mode checkbox changes
+        $('#auto_alt_debug_mode').on('change', function() {
+            if ($(this).is(':checked')) {
+                $('#debug-log').show();
+            } else {
+                $('#debug-log').hide();
+            }
+        });
     });
-
-    // Add keyboard shortcut hints
-    function addKeyboardHints() {
-        const hints = `
-            <div style="margin-top: 20px; padding: 10px; background: #f0f0f1; border-radius: 4px; font-size: 12px; color: #666;">
-                <strong>Keyboard shortcuts:</strong>
-                Ctrl+Enter: Start processing | Escape: Stop processing | R: Refresh stats
-            </div>
-        `;
-        $('.settings-section').after(hints);
-    }
-
-    // Initialize keyboard hints
-    addKeyboardHints();
 
 })(jQuery);
