@@ -3,8 +3,8 @@
  * Plugin Name: Auto Alt Tag Generator
  * Plugin URI: https://github.com/kahunam/wordpress-auto-alt-tags
  * Description: Automatically generates alt tags for images using Google's Gemini API. Includes batch processing, cost optimization, and WP-CLI support.
- * Version: 1.1.0
- * Author: Your Name
+ * Version: 1.1.1
+ * Author: Kahunam
  * Author URI: https://github.com/kahunam
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'AUTO_ALT_TAGS_VERSION', '1.1.0' );
+define( 'AUTO_ALT_TAGS_VERSION', '1.1.1' );
 define( 'AUTO_ALT_TAGS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'AUTO_ALT_TAGS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'AUTO_ALT_TAGS_PLUGIN_FILE', __FILE__ );
@@ -75,6 +75,13 @@ class AutoAltTagGenerator {
 	 * @var bool
 	 */
 	private bool $debug_mode = false;
+	
+	/**
+	 * Default prompt for alt text generation
+	 *
+	 * @var string
+	 */
+	private string $default_prompt = 'Generate a concise, descriptive alt text for this image. Focus on the main subject and important details. Keep it under 125 characters and avoid phrases like "image of" or "picture of". Be specific and helpful for screen readers.';
 	
 	/**
 	 * Constructor
@@ -158,6 +165,11 @@ class AutoAltTagGenerator {
 		register_setting( 'auto_alt_tags_settings', 'auto_alt_debug_mode', array(
 			'sanitize_callback' => 'rest_sanitize_boolean',
 			'default'           => false,
+		) );
+		
+		register_setting( 'auto_alt_tags_settings', 'auto_alt_custom_prompt', array(
+			'sanitize_callback' => 'sanitize_textarea_field',
+			'default'           => '',
 		) );
 	}
 	
@@ -348,6 +360,22 @@ class AutoAltTagGenerator {
 									</select>
 									<p class="description">
 										<?php esc_html_e( 'Use existing WordPress thumbnail size for API calls (smaller = lower costs)', 'auto-alt-tags' ); ?>
+									</p>
+								</td>
+							</tr>
+							
+							<tr>
+								<th scope="row">
+									<label for="auto_alt_custom_prompt"><?php esc_html_e( 'Custom Prompt (Optional)', 'auto-alt-tags' ); ?></label>
+								</th>
+								<td>
+									<textarea id="auto_alt_custom_prompt" 
+											  name="auto_alt_custom_prompt" 
+											  rows="4" 
+											  class="large-text"
+											  placeholder="<?php echo esc_attr( $this->default_prompt ); ?>"><?php echo esc_textarea( get_option( 'auto_alt_custom_prompt', '' ) ); ?></textarea>
+									<p class="description">
+										<?php esc_html_e( 'Override the default prompt for generating alt text. Leave empty to use the default prompt. Keep it focused on accessibility and under 125 characters.', 'auto-alt-tags' ); ?>
 									</p>
 								</td>
 							</tr>
@@ -726,18 +754,23 @@ class AutoAltTagGenerator {
 		$base64_image = base64_encode( $image_data );
 		$mime_type = wp_check_filetype( $image_path )['type'] ?: 'image/jpeg';
 		
+		// Get the prompt (custom or default)
+		$custom_prompt = get_option( 'auto_alt_custom_prompt', '' );
+		$prompt = ! empty( $custom_prompt ) ? $custom_prompt : $this->default_prompt;
+		
 		// Use the selected model
 		$model = get_option( 'auto_alt_model_name', 'gemini-2.0-flash' );
 		$api_url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent?key=' . $this->gemini_api_key;
 		
 		$this->debug_log( sprintf( 'Calling Gemini API with model: %s', $model ) );
+		$this->debug_log( sprintf( 'Using prompt: %s', $prompt ) );
 		
 		$payload = array(
 			'contents' => array(
 				array(
 					'parts' => array(
 						array(
-							'text' => 'Generate a concise, descriptive alt text for this image. Focus on the main subject and important details. Keep it under 125 characters and avoid phrases like "image of" or "picture of". Be specific and helpful for screen readers.',
+							'text' => $prompt,
 						),
 						array(
 							'inline_data' => array(
@@ -825,6 +858,7 @@ register_activation_hook( __FILE__, function () {
 	add_option( 'auto_alt_image_size', 'medium' );
 	add_option( 'auto_alt_model_name', 'gemini-2.0-flash' );
 	add_option( 'auto_alt_debug_mode', false );
+	add_option( 'auto_alt_custom_prompt', '' );
 } );
 
 // Deactivation hook
