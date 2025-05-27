@@ -15,6 +15,7 @@ A powerful WordPress plugin that intelligently generates descriptive alt text fo
 - **🛡️ Error Handling** - Robust error handling with detailed debug logging
 - **🎯 Smart Targeting** - Only processes images without existing alt text
 - **🐛 Debug Mode** - Built-in debugging with real-time logs for troubleshooting
+- **✏️ Custom Prompts** - Override the default prompt with your own instructions
 
 ## 🚀 Installation
 
@@ -96,6 +97,7 @@ wp auto-alt generate --limit=100
 | **Gemini Model** | Choose from available Gemini models | gemini-2.0-flash |
 | **Batch Size** | Images processed per batch (1-50) | 10 |
 | **Image Size for API** | WordPress thumbnail size to use | medium |
+| **Custom Prompt** | Override the default prompt (optional) | See below |
 | **Debug Mode** | Enable detailed logging | Off |
 
 ### Available Gemini Models
@@ -104,6 +106,13 @@ wp auto-alt generate --limit=100
 - **Gemini 1.5 Flash** - Previous generation, still capable
 - **Gemini 1.5 Flash 8B** - Smallest model, fastest processing
 - **Gemini 1.5 Pro** - Most capable, highest quality
+
+### Default Prompt
+
+The default prompt used for generating alt text is:
+> "Generate a concise, descriptive alt text for this image. Focus on the main subject and important details. Keep it under 125 characters and avoid phrases like 'image of' or 'picture of'. Be specific and helpful for screen readers."
+
+You can override this with your own prompt in the settings.
 
 ## 🎯 Cost Optimization
 
@@ -131,6 +140,12 @@ The admin interface provides comprehensive statistics:
 - **PHP**: 7.4 or higher
 - **Extensions**: cURL (for API calls)
 - **Permissions**: Standard WordPress media permissions
+
+### Plugin Information
+
+- **Version**: 1.1.1
+- **Author**: Kahunam
+- **License**: GPL v2 or later
 
 ### API Details
 
