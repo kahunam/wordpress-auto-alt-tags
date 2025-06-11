@@ -37,11 +37,11 @@ define( 'AUTO_ALT_TAGS_PLUGIN_FILE', __FILE__ );
 class AutoAltTagGenerator {
 	
 	/**
-	 * Gemini API key
+	 * Current API key
 	 *
 	 * @var string
 	 */
-	private string $gemini_api_key;
+	private string $current_api_key;
 	
 	/**
 	 * Default batch size for processing
@@ -167,6 +167,7 @@ class AutoAltTagGenerator {
 		add_action( 'wp_ajax_process_alt_tags', array( $this, 'ajax_process_alt_tags' ) );
 		add_action( 'wp_ajax_get_image_stats', array( $this, 'ajax_get_image_stats' ) );
 		add_action( 'wp_ajax_test_api_connection', array( $this, 'ajax_test_api_connection' ) );
+		add_action( 'wp_ajax_test_provider_key', array( $this, 'ajax_test_provider_key' ) );
 		add_action( 'wp_ajax_test_first_five', array( $this, 'ajax_test_first_five' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
@@ -174,7 +175,7 @@ class AutoAltTagGenerator {
 		
 		// Initialize settings
 		$this->current_provider = get_option( 'auto_alt_provider', 'gemini' );
-		$this->gemini_api_key = defined( 'GEMINI_API_KEY' ) ? GEMINI_API_KEY : get_option( 'auto_alt_gemini_api_key', '' );
+		$this->current_api_key = $this->get_current_api_key( $this->current_provider );
 		$this->model_name = get_option( 'auto_alt_model_name', 'gemini-2.0-flash' );
 		$this->debug_mode = (bool) get_option( 'auto_alt_debug_mode', false );
 		
@@ -413,16 +414,15 @@ class AutoAltTagGenerator {
 							<ul>
 								<li><?php esc_html_e( 'Each image processed uses API credits/tokens', 'auto-alt-tags' ); ?></li>
 								<li><?php esc_html_e( 'Costs vary by provider and model selected', 'auto-alt-tags' ); ?></li>
-								<li><?php esc_html_e( 'Gemini Flash models are most cost-effective', 'auto-alt-tags' ); ?></li>
-								<li><?php esc_html_e( 'Use "Test on First 5 Images" to estimate costs', 'auto-alt-tags' ); ?></li>
-								<li><?php esc_html_e( 'Monitor your usage on provider dashboards', 'auto-alt-tags' ); ?></li>
+								<li><?php esc_html_e( 'Gemini Flash models are recommended, as they are very cost-effective', 'auto-alt-tags' ); ?></li>
+								<li><?php esc_html_e( 'You can try "Test on First 5 Images" to test first before running on a large batch', 'auto-alt-tags' ); ?></li>
+								<li><?php esc_html_e( 'Monitor your usage and costs on provider dashboards', 'auto-alt-tags' ); ?></li>
 							</ul>
 						</div>
 						<div>
 							<h3><?php esc_html_e( '🔒 Security Best Practices', 'auto-alt-tags' ); ?></h3>
 							<ul>
-								<li><?php esc_html_e( 'Rotate API keys regularly (monthly recommended)', 'auto-alt-tags' ); ?></li>
-								<li><?php esc_html_e( 'Use wp-config.php to store keys securely', 'auto-alt-tags' ); ?></li>
+								<li><?php esc_html_e( 'Rotate API keys regularly', 'auto-alt-tags' ); ?></li>
 								<li><?php esc_html_e( 'Set spending limits on provider accounts', 'auto-alt-tags' ); ?></li>
 								<li><?php esc_html_e( 'Monitor API usage for unexpected activity', 'auto-alt-tags' ); ?></li>
 								<li><?php esc_html_e( 'Review generated alt text before publishing', 'auto-alt-tags' ); ?></li>
@@ -446,41 +446,103 @@ class AutoAltTagGenerator {
 						<table class="form-table" role="presentation">
 							<tr>
 								<th scope="row">
-									<label for="auto_alt_gemini_api_key"><?php esc_html_e( 'Gemini API Key', 'auto-alt-tags' ); ?></label>
+									<label for="auto_alt_provider"><?php esc_html_e( 'AI Provider', 'auto-alt-tags' ); ?></label>
 								</th>
 								<td>
-									<input type="password" 
-										   id="auto_alt_gemini_api_key" 
-										   name="auto_alt_gemini_api_key" 
-										   value="<?php echo esc_attr( get_option( 'auto_alt_gemini_api_key', '' ) ); ?>" 
-										   class="regular-text" 
-										   autocomplete="new-password" />
-									<p class="description">
-										<?php
-										printf(
-											/* translators: %s: URL to Google AI Studio */
-											esc_html__( 'Get your API key from %s', 'auto-alt-tags' ),
-											'<a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Google AI Studio', 'auto-alt-tags' ) . '</a>'
-										);
+									<select id="auto_alt_provider" name="auto_alt_provider">
+										<?php 
+										$selected_provider = get_option( 'auto_alt_provider', 'gemini' );
+										foreach ( $this->available_providers as $provider_key => $provider_data ) : 
 										?>
+											<option value="<?php echo esc_attr( $provider_key ); ?>" <?php selected( $selected_provider, $provider_key ); ?>>
+												<?php echo esc_html( $provider_data['name'] ); ?>
+											</option>
+										<?php endforeach; ?>
+									</select>
+									<p class="description">
+										<?php esc_html_e( 'Choose your AI provider for generating alt text', 'auto-alt-tags' ); ?>
 									</p>
 								</td>
 							</tr>
 							
+							<?php foreach ( $this->available_providers as $provider_key => $provider_data ) : ?>
+							<tr class="provider-setting" data-provider="<?php echo esc_attr( $provider_key ); ?>" style="display: <?php echo $selected_provider === $provider_key ? 'table-row' : 'none'; ?>;">
+								<th scope="row">
+									<label for="<?php echo esc_attr( $provider_data['api_key_setting'] ); ?>"><?php echo esc_html( $provider_data['name'] ); ?> <?php esc_html_e( 'API Key', 'auto-alt-tags' ); ?></label>
+								</th>
+								<td>
+									<div style="display: flex; gap: 10px; align-items: center;">
+										<input type="password" 
+											   id="<?php echo esc_attr( $provider_data['api_key_setting'] ); ?>" 
+											   name="<?php echo esc_attr( $provider_data['api_key_setting'] ); ?>" 
+											   value="<?php echo esc_attr( get_option( $provider_data['api_key_setting'], '' ) ); ?>" 
+											   class="regular-text api-key-input" 
+											   autocomplete="new-password" 
+											   data-provider="<?php echo esc_attr( $provider_key ); ?>" />
+										<button type="button" class="button button-secondary test-api-key" data-provider="<?php echo esc_attr( $provider_key ); ?>">
+											<?php esc_html_e( 'Test Key', 'auto-alt-tags' ); ?>
+										</button>
+										<span class="test-result" id="test-result-<?php echo esc_attr( $provider_key ); ?>"></span>
+									</div>
+									<?php if ( 'gemini' === $provider_key ) : ?>
+										<p class="description">
+											<?php
+											printf(
+												/* translators: %s: URL to Google AI Studio */
+												esc_html__( 'Get your API key from %s', 'auto-alt-tags' ),
+												'<a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Google AI Studio', 'auto-alt-tags' ) . '</a>'
+											);
+											?>
+										</p>
+									<?php elseif ( 'openai' === $provider_key ) : ?>
+										<p class="description">
+											<?php
+											printf(
+												esc_html__( 'Get your API key from %s', 'auto-alt-tags' ),
+												'<a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">' . esc_html__( 'OpenAI Platform', 'auto-alt-tags' ) . '</a>'
+											);
+											?>
+										</p>
+									<?php elseif ( 'claude' === $provider_key ) : ?>
+										<p class="description">
+											<?php
+											printf(
+												esc_html__( 'Get your API key from %s', 'auto-alt-tags' ),
+												'<a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Anthropic Console', 'auto-alt-tags' ) . '</a>'
+											);
+											?>
+										</p>
+									<?php elseif ( 'openrouter' === $provider_key ) : ?>
+										<p class="description">
+											<?php
+											printf(
+												esc_html__( 'Get your API key from %s', 'auto-alt-tags' ),
+												'<a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer">' . esc_html__( 'OpenRouter', 'auto-alt-tags' ) . '</a>'
+											);
+											?>
+										</p>
+									<?php endif; ?>
+								</td>
+							</tr>
+							<?php endforeach; ?>
+							
 							<tr>
 								<th scope="row">
-									<label for="auto_alt_model_name"><?php esc_html_e( 'Gemini Model', 'auto-alt-tags' ); ?></label>
+									<label for="auto_alt_model_name"><?php esc_html_e( 'AI Model', 'auto-alt-tags' ); ?></label>
 								</th>
 								<td>
 									<select id="auto_alt_model_name" name="auto_alt_model_name">
-										<?php foreach ( $this->available_models as $model => $description ) : ?>
+										<?php 
+										$current_models = $this->get_available_models();
+										foreach ( $current_models as $model => $description ) : 
+										?>
 											<option value="<?php echo esc_attr( $model ); ?>" <?php selected( get_option( 'auto_alt_model_name', 'gemini-2.0-flash' ), $model ); ?>>
 												<?php echo esc_html( $description ); ?>
 											</option>
 										<?php endforeach; ?>
 									</select>
 									<p class="description">
-										<?php esc_html_e( 'Choose the Gemini model to use for generating alt text', 'auto-alt-tags' ); ?>
+										<?php esc_html_e( 'Choose the AI model to use for generating alt text', 'auto-alt-tags' ); ?>
 									</p>
 								</td>
 							</tr>
@@ -583,15 +645,92 @@ class AutoAltTagGenerator {
 			wp_send_json_error( __( 'Unauthorized access', 'auto-alt-tags' ) );
 		}
 		
-		// Check API key
-		if ( empty( $this->gemini_api_key ) ) {
-			wp_send_json_error( __( 'Gemini API key not configured', 'auto-alt-tags' ) );
+		// Get provider from request or use current setting
+		$provider = sanitize_text_field( $_POST['provider'] ?? get_option( 'auto_alt_provider', 'gemini' ) );
+		$api_key = sanitize_text_field( $_POST['api_key'] ?? $this->get_current_api_key( $provider ) );
+		
+		if ( empty( $api_key ) ) {
+			$provider_name = $this->available_providers[ $provider ]['name'] ?? 'Selected';
+			wp_send_json_error( sprintf( __( '%s API key not provided', 'auto-alt-tags' ), $provider_name ) );
 		}
 		
-		$this->debug_log( 'Testing API connection...' );
+		$this->debug_log( sprintf( 'Testing %s API connection...', $provider ) );
 		
-		// Test API with a simple text prompt
-		$api_url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $this->model_name . ':generateContent?key=' . $this->gemini_api_key;
+		// Test API connection based on provider
+		$result = $this->test_api_connection_for_provider( $provider, $api_key );
+		if ( $result['success'] ) {
+			wp_send_json_success( $result );
+		} else {
+			wp_send_json_error( $result['message'] );
+		}
+	}
+	
+	/**
+	 * AJAX handler for testing individual provider API keys
+	 */
+	public function ajax_test_provider_key(): void {
+		// Verify nonce for security
+		if ( ! check_ajax_referer( 'auto_alt_nonce', 'nonce', false ) ) {
+			wp_send_json_error( __( 'Security check failed', 'auto-alt-tags' ) );
+		}
+		
+		// Check user capabilities
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Unauthorized access', 'auto-alt-tags' ) );
+		}
+		
+		$provider = sanitize_text_field( $_POST['provider'] ?? '' );
+		$api_key = sanitize_text_field( $_POST['api_key'] ?? '' );
+		
+		if ( empty( $provider ) || empty( $api_key ) ) {
+			wp_send_json_error( __( 'Provider and API key are required', 'auto-alt-tags' ) );
+		}
+		
+		$this->debug_log( sprintf( 'Testing %s API key...', $provider ) );
+		
+		// Test API connection
+		$result = $this->test_api_connection_for_provider( $provider, $api_key );
+		if ( $result['success'] ) {
+			wp_send_json_success( $result );
+		} else {
+			wp_send_json_error( $result['message'] );
+		}
+	}
+	
+	/**
+	 * Test API connection for a specific provider
+	 *
+	 * @param string $provider Provider name.
+	 * @param string $api_key API key.
+	 * @return array Result array
+	 */
+	private function test_api_connection_for_provider( string $provider, string $api_key ): array {
+		switch ( $provider ) {
+			case 'gemini':
+				return $this->test_gemini_connection( $api_key );
+			case 'openai':
+				return $this->test_openai_connection( $api_key );
+			case 'claude':
+				return $this->test_claude_connection( $api_key );
+			case 'openrouter':
+				return $this->test_openrouter_connection( $api_key );
+			default:
+				return array(
+					'success' => false,
+					'message' => __( 'Unsupported provider', 'auto-alt-tags' ),
+				);
+		}
+	}
+	
+	/**
+	 * Test Gemini API connection
+	 *
+	 * @param string $api_key API key.
+	 * @return array Result array
+	 */
+	private function test_gemini_connection( string $api_key ): array {
+		$model = get_option( 'auto_alt_model_name', 'gemini-2.0-flash' );
+		$api_url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent?key=' . $api_key;
 		
 		$payload = array(
 			'contents' => array(
@@ -609,9 +748,6 @@ class AutoAltTagGenerator {
 			),
 		);
 		
-		$this->debug_log( 'API URL: ' . $api_url );
-		$this->debug_log( 'Using model: ' . $this->model_name );
-		
 		$response = wp_remote_post( $api_url, array(
 			'headers' => array(
 				'Content-Type' => 'application/json',
@@ -621,31 +757,217 @@ class AutoAltTagGenerator {
 		) );
 		
 		if ( is_wp_error( $response ) ) {
-			$error_message = $response->get_error_message();
-			$this->debug_log( 'API test failed: ' . $error_message );
-			wp_send_json_error( sprintf( __( 'Connection failed: %s', 'auto-alt-tags' ), $error_message ) );
+			return array(
+				'success' => false,
+				'message' => sprintf( __( 'Connection failed: %s', 'auto-alt-tags' ), $response->get_error_message() ),
+			);
 		}
 		
 		$response_code = wp_remote_retrieve_response_code( $response );
 		$body = wp_remote_retrieve_body( $response );
 		$data = json_decode( $body, true );
 		
-		$this->debug_log( 'Response code: ' . $response_code );
-		$this->debug_log( 'Response body: ' . $body );
-		
 		if ( 200 !== $response_code ) {
 			$error_msg = isset( $data['error']['message'] ) ? $data['error']['message'] : __( 'Unknown error', 'auto-alt-tags' );
-			wp_send_json_error( sprintf( __( 'API Error (%d): %s', 'auto-alt-tags' ), $response_code, $error_msg ) );
+			return array(
+				'success' => false,
+				'message' => sprintf( __( 'API Error (%d): %s', 'auto-alt-tags' ), $response_code, $error_msg ),
+			);
 		}
 		
 		if ( isset( $data['candidates'][0]['content']['parts'][0]['text'] ) ) {
-			wp_send_json_success( array(
+			return array(
+				'success' => true,
 				'message' => __( 'API connection successful!', 'auto-alt-tags' ),
 				'response' => $data['candidates'][0]['content']['parts'][0]['text'],
-			) );
-		} else {
-			wp_send_json_error( __( 'Unexpected API response format', 'auto-alt-tags' ) );
+			);
 		}
+		
+		return array(
+			'success' => false,
+			'message' => __( 'Unexpected API response format', 'auto-alt-tags' ),
+		);
+	}
+	
+	/**
+	 * Test OpenAI API connection
+	 *
+	 * @param string $api_key API key.
+	 * @return array Result array
+	 */
+	private function test_openai_connection( string $api_key ): array {
+		$payload = array(
+			'model' => 'gpt-3.5-turbo',
+			'messages' => array(
+				array(
+					'role' => 'user',
+					'content' => 'Respond with exactly these 5 words: "Hello, API is working correctly"',
+				),
+			),
+			'max_tokens' => 10,
+		);
+		
+		$response = wp_remote_post( 'https://api.openai.com/v1/chat/completions', array(
+			'headers' => array(
+				'Content-Type' => 'application/json',
+				'Authorization' => 'Bearer ' . $api_key,
+			),
+			'body'    => wp_json_encode( $payload ),
+			'timeout' => 30,
+		) );
+		
+		if ( is_wp_error( $response ) ) {
+			return array(
+				'success' => false,
+				'message' => sprintf( __( 'Connection failed: %s', 'auto-alt-tags' ), $response->get_error_message() ),
+			);
+		}
+		
+		$response_code = wp_remote_retrieve_response_code( $response );
+		$body = wp_remote_retrieve_body( $response );
+		$data = json_decode( $body, true );
+		
+		if ( 200 !== $response_code ) {
+			$error_msg = isset( $data['error']['message'] ) ? $data['error']['message'] : __( 'Unknown error', 'auto-alt-tags' );
+			return array(
+				'success' => false,
+				'message' => sprintf( __( 'API Error (%d): %s', 'auto-alt-tags' ), $response_code, $error_msg ),
+			);
+		}
+		
+		if ( isset( $data['choices'][0]['message']['content'] ) ) {
+			return array(
+				'success' => true,
+				'message' => __( 'API connection successful!', 'auto-alt-tags' ),
+				'response' => $data['choices'][0]['message']['content'],
+			);
+		}
+		
+		return array(
+			'success' => false,
+			'message' => __( 'Unexpected API response format', 'auto-alt-tags' ),
+		);
+	}
+	
+	/**
+	 * Test Claude API connection
+	 *
+	 * @param string $api_key API key.
+	 * @return array Result array
+	 */
+	private function test_claude_connection( string $api_key ): array {
+		$payload = array(
+			'model' => 'claude-3-haiku-20240307',
+			'max_tokens' => 10,
+			'messages' => array(
+				array(
+					'role' => 'user',
+					'content' => 'Respond with exactly these 5 words: "Hello, API is working correctly"',
+				),
+			),
+		);
+		
+		$response = wp_remote_post( 'https://api.anthropic.com/v1/messages', array(
+			'headers' => array(
+				'Content-Type' => 'application/json',
+				'x-api-key' => $api_key,
+				'anthropic-version' => '2023-06-01',
+			),
+			'body'    => wp_json_encode( $payload ),
+			'timeout' => 30,
+		) );
+		
+		if ( is_wp_error( $response ) ) {
+			return array(
+				'success' => false,
+				'message' => sprintf( __( 'Connection failed: %s', 'auto-alt-tags' ), $response->get_error_message() ),
+			);
+		}
+		
+		$response_code = wp_remote_retrieve_response_code( $response );
+		$body = wp_remote_retrieve_body( $response );
+		$data = json_decode( $body, true );
+		
+		if ( 200 !== $response_code ) {
+			$error_msg = isset( $data['error']['message'] ) ? $data['error']['message'] : __( 'Unknown error', 'auto-alt-tags' );
+			return array(
+				'success' => false,
+				'message' => sprintf( __( 'API Error (%d): %s', 'auto-alt-tags' ), $response_code, $error_msg ),
+			);
+		}
+		
+		if ( isset( $data['content'][0]['text'] ) ) {
+			return array(
+				'success' => true,
+				'message' => __( 'API connection successful!', 'auto-alt-tags' ),
+				'response' => $data['content'][0]['text'],
+			);
+		}
+		
+		return array(
+			'success' => false,
+			'message' => __( 'Unexpected API response format', 'auto-alt-tags' ),
+		);
+	}
+	
+	/**
+	 * Test OpenRouter API connection
+	 *
+	 * @param string $api_key API key.
+	 * @return array Result array
+	 */
+	private function test_openrouter_connection( string $api_key ): array {
+		$payload = array(
+			'model' => 'anthropic/claude-3.5-sonnet',
+			'messages' => array(
+				array(
+					'role' => 'user',
+					'content' => 'Respond with exactly these 5 words: "Hello, API is working correctly"',
+				),
+			),
+			'max_tokens' => 10,
+		);
+		
+		$response = wp_remote_post( 'https://openrouter.ai/api/v1/chat/completions', array(
+			'headers' => array(
+				'Content-Type' => 'application/json',
+				'Authorization' => 'Bearer ' . $api_key,
+			),
+			'body'    => wp_json_encode( $payload ),
+			'timeout' => 30,
+		) );
+		
+		if ( is_wp_error( $response ) ) {
+			return array(
+				'success' => false,
+				'message' => sprintf( __( 'Connection failed: %s', 'auto-alt-tags' ), $response->get_error_message() ),
+			);
+		}
+		
+		$response_code = wp_remote_retrieve_response_code( $response );
+		$body = wp_remote_retrieve_body( $response );
+		$data = json_decode( $body, true );
+		
+		if ( 200 !== $response_code ) {
+			$error_msg = isset( $data['error']['message'] ) ? $data['error']['message'] : __( 'Unknown error', 'auto-alt-tags' );
+			return array(
+				'success' => false,
+				'message' => sprintf( __( 'API Error (%d): %s', 'auto-alt-tags' ), $response_code, $error_msg ),
+			);
+		}
+		
+		if ( isset( $data['choices'][0]['message']['content'] ) ) {
+			return array(
+				'success' => true,
+				'message' => __( 'API connection successful!', 'auto-alt-tags' ),
+				'response' => $data['choices'][0]['message']['content'],
+			);
+		}
+		
+		return array(
+			'success' => false,
+			'message' => __( 'Unexpected API response format', 'auto-alt-tags' ),
+		);
 	}
 	
 	/**
@@ -662,9 +984,13 @@ class AutoAltTagGenerator {
 			wp_send_json_error( __( 'Unauthorized access', 'auto-alt-tags' ) );
 		}
 		
-		// Check API key
-		if ( empty( $this->gemini_api_key ) ) {
-			wp_send_json_error( __( 'Gemini API key not configured', 'auto-alt-tags' ) );
+		// Check API key for current provider
+		$current_provider = get_option( 'auto_alt_provider', 'gemini' );
+		$api_key = $this->get_current_api_key( $current_provider );
+		
+		if ( empty( $api_key ) ) {
+			$provider_name = $this->available_providers[ $current_provider ]['name'] ?? 'Selected';
+			wp_send_json_error( sprintf( __( '%s API key not configured', 'auto-alt-tags' ), $provider_name ) );
 		}
 		
 		// Rate limiting

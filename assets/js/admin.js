@@ -319,6 +319,86 @@
         $('#test-results-modal').show();
     }
 
+    /**
+     * Test individual provider API key
+     */
+    function testProviderKey(provider, apiKey, button) {
+        debugLog('Testing ' + provider + ' API key...');
+        
+        // Show loading state on button
+        const originalText = button.text();
+        button.text('Testing...').prop('disabled', true);
+        
+        // Clear previous results
+        const resultSpan = $('#test-result-' + provider);
+        resultSpan.html('').removeClass('success error');
+        
+        $.ajax({
+            url: autoAltAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'test_provider_key',
+                provider: provider,
+                api_key: apiKey,
+                nonce: autoAltAjax.nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    debugLog(provider + ' API test successful');
+                    resultSpan.html('✓ Valid').addClass('success').css({
+                        'color': '#46b450',
+                        'font-weight': 'bold',
+                        'margin-left': '10px'
+                    });
+                } else {
+                    debugLog(provider + ' API test failed: ' + response.data);
+                    resultSpan.html('✗ Invalid').addClass('error').css({
+                        'color': '#dc3232',
+                        'font-weight': 'bold',
+                        'margin-left': '10px'
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                debugLog(provider + ' API test error: ' + status + ' - ' + error);
+                resultSpan.html('✗ Error').addClass('error').css({
+                    'color': '#dc3232',
+                    'font-weight': 'bold',
+                    'margin-left': '10px'
+                });
+            },
+            complete: function() {
+                // Restore button state
+                button.text(originalText).prop('disabled', false);
+            }
+        });
+    }
+
+    /**
+     * Handle provider selection change
+     */
+    function handleProviderChange() {
+        const selectedProvider = $('#auto_alt_provider').val();
+        
+        // Hide all provider settings
+        $('.provider-setting').hide();
+        
+        // Show selected provider setting
+        $('.provider-setting[data-provider="' + selectedProvider + '"]').show();
+        
+        // Update model dropdown based on provider
+        updateModelDropdown(selectedProvider);
+    }
+
+    /**
+     * Update model dropdown based on provider
+     */
+    function updateModelDropdown(provider) {
+        // This would need to be implemented with PHP data or AJAX
+        // For now, we'll just log the change
+        debugLog('Provider changed to: ' + provider);
+    }
+
     // Document ready
     $(document).ready(function() {
         
@@ -403,6 +483,29 @@
             } else {
                 $('#debug-log').hide();
             }
+        });
+        
+        // Provider selection change handler
+        $('#auto_alt_provider').on('change', function() {
+            handleProviderChange();
+        });
+        
+        // Initialize provider display on page load
+        handleProviderChange();
+        
+        // Test API key buttons
+        $('.test-api-key').on('click', function(e) {
+            e.preventDefault();
+            const provider = $(this).data('provider');
+            const apiKey = $('#auto_alt_' + provider + '_api_key').val() || 
+                           $('#auto_alt_gemini_api_key').val(); // fallback for backwards compatibility
+            
+            if (!apiKey) {
+                alert('Please enter an API key first');
+                return;
+            }
+            
+            testProviderKey(provider, apiKey, $(this));
         });
         
         // Add some visual feedback when hovering over buttons
