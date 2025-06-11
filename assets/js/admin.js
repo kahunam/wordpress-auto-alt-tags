@@ -213,6 +213,112 @@
         });
     }
 
+    /**
+     * Test first 5 images
+     */
+    function testFirstFiveImages() {
+        debugLog('Testing first 5 images...');
+        
+        // Show loading state on button
+        const $button = $('#test-first-five');
+        const originalText = $button.text();
+        $button.text('Testing...').prop('disabled', true);
+        
+        $.ajax({
+            url: autoAltAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'test_first_five',
+                nonce: autoAltAjax.nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    debugLog('Test completed successfully');
+                    displayTestResults(response.data);
+                } else {
+                    debugLog('Test failed: ' + response.data);
+                    alert('Test Failed: ' + response.data);
+                }
+            },
+            error: function(xhr, status, error) {
+                debugLog('Test error: ' + status + ' - ' + error);
+                alert('Test failed: ' + error);
+            },
+            complete: function() {
+                // Restore button state
+                $button.text(originalText).prop('disabled', false);
+            }
+        });
+    }
+
+    /**
+     * Display test results in modal
+     */
+    function displayTestResults(data) {
+        let html = '<div style="margin-bottom: 20px;">';
+        html += '<p><strong>' + data.message + '</strong></p>';
+        html += '<p>Provider: <strong>' + data.provider + '</strong> | Model: <strong>' + data.model + '</strong></p>';
+        html += '</div>';
+        
+        if (data.results && data.results.length > 0) {
+            html += '<div style="display: grid; gap: 15px;">';
+            
+            data.results.forEach(function(result) {
+                html += '<div style="border: 1px solid #ddd; padding: 15px; border-radius: 5px; display: flex; gap: 15px;">';
+                
+                // Thumbnail
+                if (result.thumbnail) {
+                    html += '<div style="flex-shrink: 0;">';
+                    html += '<img src="' + result.thumbnail + '" alt="Thumbnail" style="width: 100px; height: 100px; object-fit: cover; border-radius: 3px;">';
+                    html += '</div>';
+                }
+                
+                // Content
+                html += '<div style="flex-grow: 1;">';
+                html += '<h4 style="margin: 0 0 10px 0;">' + result.title + '</h4>';
+                
+                if (result.success) {
+                    html += '<div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 10px; border-radius: 3px; margin-bottom: 10px;">';
+                    html += '<strong>Generated Alt Text:</strong><br>';
+                    html += '"' + result.alt_text + '"';
+                    html += '</div>';
+                } else {
+                    html += '<div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 3px; margin-bottom: 10px;">';
+                    html += '<strong>Error:</strong> ' + result.error;
+                    html += '</div>';
+                }
+                
+                html += '<small><a href="' + result.url + '" target="_blank">View Full Image</a></small>';
+                html += '</div>';
+                html += '</div>';
+            });
+            
+            html += '</div>';
+        }
+        
+        if (data.errors && data.errors.length > 0) {
+            html += '<div style="margin-top: 20px;">';
+            html += '<h3>Errors:</h3>';
+            html += '<ul>';
+            data.errors.forEach(function(error) {
+                html += '<li>' + error + '</li>';
+            });
+            html += '</ul>';
+            html += '</div>';
+        }
+        
+        // Show proceed button if there were successful results
+        const hasSuccess = data.results && data.results.some(r => r.success);
+        if (hasSuccess) {
+            $('#proceed-with-all').show();
+        } else {
+            $('#proceed-with-all').hide();
+        }
+        
+        $('#test-results-content').html(html);
+        $('#test-results-modal').show();
+    }
+
     // Document ready
     $(document).ready(function() {
         
@@ -265,6 +371,23 @@
         $('#test-api').on('click', function(e) {
             e.preventDefault();
             testAPIConnection();
+        });
+        
+        // Test first 5 images button
+        $('#test-first-five').on('click', function(e) {
+            e.preventDefault();
+            testFirstFiveImages();
+        });
+        
+        // Modal close handlers
+        $('#close-modal, #close-modal-btn').on('click', function() {
+            $('#test-results-modal').hide();
+        });
+        
+        // Proceed with all images button
+        $('#proceed-with-all').on('click', function() {
+            $('#test-results-modal').hide();
+            $('#start-processing').click();
         });
         
         // Refresh stats button
