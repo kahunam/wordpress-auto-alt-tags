@@ -1,12 +1,14 @@
 # WordPress Auto Alt Tags
 
-🖼️ **Automatically generate alt tags for WordPress images using Google's Gemini API**
+🖼️ **Automatically generate alt tags for WordPress images using multiple AI providers**
 
-A powerful WordPress plugin that intelligently generates descriptive alt text for images using AI, with batch processing, cost optimization, and WP-CLI support.
+A powerful WordPress plugin that intelligently generates descriptive alt text for images using AI APIs (Gemini, OpenAI, Claude, OpenRouter), with batch processing, cost optimization, real-time API key testing, and WP-CLI support.
 
 ## ✨ Features
 
-- **🤖 AI-Powered Alt Text Generation** - Uses Gemini models for accurate, descriptive alt tags
+- **🌐 Multiple AI Providers** - Support for Gemini, OpenAI, Claude, and OpenRouter APIs
+- **🔑 Real-Time API Key Testing** - Test API keys instantly with visual feedback (✓ Valid / ✗ Invalid)
+- **🤖 AI-Powered Alt Text Generation** - Uses advanced AI models for accurate, descriptive alt tags
 - **⚡ Batch Processing** - Process multiple images efficiently without timeout issues  
 - **💰 Cost Optimized** - Uses existing WordPress thumbnails to save API credits (up to 80% savings)
 - **📊 Progress Tracking** - Real-time progress updates with detailed statistics
@@ -16,6 +18,7 @@ A powerful WordPress plugin that intelligently generates descriptive alt text fo
 - **🎯 Smart Targeting** - Only processes images without existing alt text
 - **🐛 Debug Mode** - Built-in debugging with real-time logs for troubleshooting
 - **✏️ Custom Prompts** - Override the default prompt with your own instructions
+- **🔧 Platform Agnostic** - Easy provider switching with dynamic model selection
 
 ## 🚀 Installation
 
@@ -24,7 +27,7 @@ A powerful WordPress plugin that intelligently generates descriptive alt text fo
 1. Download the plugin files
 2. Upload to `/wp-content/plugins/auto-alt-tags/`
 3. Activate the plugin through WordPress admin
-4. Configure your Gemini API key
+4. Configure your preferred AI provider and API key
 
 ### Method 2: Git Clone
 
@@ -35,26 +38,60 @@ git clone https://github.com/kahunam/wordpress-auto-alt-tags.git auto-alt-tags
 
 ## ⚙️ Configuration
 
-### Get Your Gemini API Key
+### Supported AI Providers
 
-1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
-2. Create an account and generate an API key
-3. Note: Gemini models have generous free tier limits
+Choose from multiple AI providers based on your needs:
 
-### Configure the API Key
+#### Google Gemini (Recommended)
+- **Get API Key**: [Google AI Studio](https://aistudio.google.com/app/apikey)
+- **Benefits**: Generous free tier, very cost-effective, excellent image analysis
+- **Models**: Gemini 2.0 Flash, Gemini 1.5 Flash, Gemini 1.5 Pro
 
-**Option A: wp-config.php (Recommended)**
+#### OpenAI
+- **Get API Key**: [OpenAI Platform](https://platform.openai.com/api-keys)
+- **Benefits**: High-quality text generation, reliable service
+- **Models**: GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-4 Vision
+
+#### Anthropic Claude
+- **Get API Key**: [Anthropic Console](https://console.anthropic.com/)
+- **Benefits**: Excellent reasoning, safety-focused responses
+- **Models**: Claude 3.5 Sonnet, Claude 3.5 Haiku, Claude 3 Opus
+
+#### OpenRouter
+- **Get API Key**: [OpenRouter](https://openrouter.ai/keys)
+- **Benefits**: Access to multiple models through one API, competitive pricing
+- **Models**: Claude 3.5 Sonnet, GPT-4o, Gemini Pro via OpenRouter
+
+### Configure Your API Key
+
+**Option A: WordPress Admin (Recommended)**
+1. Go to **Media → Auto Alt Tags**
+2. Select your preferred AI provider from the dropdown
+3. Enter your API key in the corresponding field
+4. Click **"Test Key"** to verify it works instantly
+5. Save your settings
+
+**Option B: wp-config.php (Gemini only - for backwards compatibility)**
 ```php
 define('GEMINI_API_KEY', 'your-api-key-here');
 ```
 
-**Option B: WordPress Admin**
-- Go to Media → Auto Alt Tags
-- Enter your API key in the settings section
-
 **Option C: WP-CLI**
 ```bash
+# For Gemini
 wp option update auto_alt_gemini_api_key "your-api-key-here"
+
+# For OpenAI
+wp option update auto_alt_openai_api_key "your-api-key-here"
+
+# For Claude
+wp option update auto_alt_claude_api_key "your-api-key-here"
+
+# For OpenRouter
+wp option update auto_alt_openrouter_api_key "your-api-key-here"
+
+# Set the active provider
+wp option update auto_alt_provider "gemini"
 ```
 
 ## 📖 Usage
@@ -63,10 +100,12 @@ wp option update auto_alt_gemini_api_key "your-api-key-here"
 
 1. Navigate to **Media → Auto Alt Tags**
 2. Review the statistics dashboard
-3. Click **"Test API Connection"** to verify your setup
-4. Click **"Start Auto-Tagging Images"**
-5. Monitor progress in real-time
-6. View processing results and any errors in the debug log
+3. Select your AI provider and enter your API key
+4. Click **"Test Key"** to verify your API key works (✓ Valid / ✗ Invalid feedback)
+5. Optionally click **"Test on First 5 Images"** to preview results
+6. Click **"Start Auto-Tagging All Images"** to process your entire library
+7. Monitor progress in real-time with detailed statistics
+8. View processing results and any errors in the debug log
 
 ### WP-CLI Commands
 
@@ -93,19 +132,38 @@ wp auto-alt generate --limit=100
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| **Gemini API Key** | Your Google AI Studio API key | None |
-| **Gemini Model** | Choose from available Gemini models | gemini-2.0-flash |
+| **AI Provider** | Choose your preferred AI service | Gemini |
+| **API Key** | Provider-specific API key with real-time testing | None |
+| **AI Model** | Model selection (updates based on provider) | gemini-2.0-flash |
 | **Batch Size** | Images processed per batch (1-50) | 10 |
 | **Image Size for API** | WordPress thumbnail size to use | medium |
 | **Custom Prompt** | Override the default prompt (optional) | See below |
 | **Debug Mode** | Enable detailed logging | Off |
 
-### Available Gemini Models
+### Available Models by Provider
 
-- **Gemini 2.0 Flash** - Recommended: Fast & efficient
+#### Gemini Models
+- **Gemini 2.0 Flash** - Recommended: Fast & efficient, very cost-effective
 - **Gemini 1.5 Flash** - Previous generation, still capable
 - **Gemini 1.5 Flash 8B** - Smallest model, fastest processing
 - **Gemini 1.5 Pro** - Most capable, highest quality
+
+#### OpenAI Models
+- **GPT-4o** - Latest vision-capable model
+- **GPT-4o Mini** - Cost-effective option
+- **GPT-4 Turbo** - Most capable
+- **GPT-4 Vision Preview** - Vision-specific model
+
+#### Claude Models
+- **Claude 3.5 Sonnet** - Latest and most capable
+- **Claude 3.5 Haiku** - Fast and efficient
+- **Claude 3 Opus** - Most powerful reasoning
+
+#### OpenRouter Models
+- **Claude 3.5 Sonnet via OpenRouter** - Access Claude through OpenRouter
+- **GPT-4o via OpenRouter** - Access OpenAI through OpenRouter
+- **GPT-4o Mini via OpenRouter** - Cost-effective OpenAI access
+- **Gemini Pro 1.5 via OpenRouter** - Access Gemini through OpenRouter
 
 ### Default Prompt
 
@@ -121,7 +179,16 @@ The plugin includes several features to minimize API costs:
 - **WordPress Thumbnails**: Uses existing thumbnail sizes instead of full images (saves ~80% on credits)
 - **Smart Filtering**: Only processes images without existing alt text
 - **Batch Processing**: Prevents API rate limiting with configurable delays
-- **Efficient Models**: Defaults to Gemini 2.0 Flash (most cost-effective option)
+- **Efficient Models**: Defaults to cost-effective options (Gemini 2.0 Flash recommended)
+- **Provider Choice**: Compare costs across different AI providers
+- **Test First**: Use "Test on First 5 Images" to estimate costs before batch processing
+
+### Cost Comparison Tips
+
+- **Gemini Flash models** are recommended as they are very cost-effective
+- **OpenAI GPT-4o Mini** offers good balance of cost and quality
+- **Claude 3.5 Haiku** is the fastest and most economical Claude option
+- **OpenRouter** may offer competitive pricing for multiple providers
 
 ## 📈 Statistics Dashboard
 
@@ -143,16 +210,16 @@ The admin interface provides comprehensive statistics:
 
 ### Plugin Information
 
-- **Version**: 1.1.1
+- **Version**: 1.2.0
 - **Author**: Kahunam
 - **License**: GPL v2 or later
 
 ### API Details
 
-- **Endpoint**: Google Gemini API v1beta
+- **Supported APIs**: Gemini v1beta, OpenAI v1, Claude v1, OpenRouter v1
 - **Image Format**: Any format supported by WordPress
 - **Max Tokens**: 50 (optimized for alt text)
-- **Temperature**: 0.3 (balanced creativity/consistency)
+- **Temperature**: Low values for consistency (varies by provider)
 
 ### File Structure
 
@@ -172,21 +239,30 @@ auto-alt-tags/
 
 ### Common Issues
 
-**"Gemini API key not configured"**
-- Ensure your API key is properly set in wp-config.php or admin settings
+**"[Provider] API key not configured"**
+- Ensure your API key is properly set for the selected provider
+- Use the "Test Key" button to verify your API key works
+- Check that you've selected the correct provider in the dropdown
+
+**"API key not valid" (✗ Invalid feedback)**
+- Double-check your API key for typos
+- Verify the key has proper permissions for your selected provider
+- Ensure your provider account has sufficient credits/quota
 
 **"Failed to get image URL"**
 - Check that WordPress has generated thumbnails for your images
 - Run `wp media regenerate` to create missing thumbnails
 
 **"API request failed"**
-- Verify your API key is valid
-- Check server has outbound HTTPS access
+- Use the "Test Key" button to diagnose the specific issue
+- Check server has outbound HTTPS access to API endpoints
 - Enable debug mode to see detailed error messages
+- Verify your provider account has available credits
 
 **Processing stops unexpectedly**
 - Use WP-CLI for large batches to avoid browser timeouts
 - Check PHP memory and execution time limits
+- Try switching to a different AI provider if one is experiencing issues
 
 ### Debug Mode
 
@@ -195,6 +271,15 @@ Enable debug mode in the plugin settings to see detailed logs:
 - Processing status for each image
 - Detailed error messages
 - Performance metrics
+
+### API Key Testing
+
+The plugin includes real-time API key testing:
+- **Instant Validation**: Test keys immediately with visual feedback
+- **Provider-Specific Testing**: Each provider has tailored test endpoints
+- **Visual Indicators**: Green ✓ for valid keys, red ✗ for invalid ones
+- **Error Details**: Specific error messages when keys fail
+- **No Guesswork**: Know immediately if your setup works before processing images
 
 ## 🤝 Contributing
 
@@ -214,6 +299,9 @@ This project is licensed under the GPL v2 or later - see the [LICENSE](LICENSE) 
 ## 🙏 Acknowledgments
 
 - Google AI Studio for the Gemini API
+- OpenAI for GPT models and vision capabilities
+- Anthropic for Claude's advanced reasoning
+- OpenRouter for multi-provider API access
 - WordPress community for excellent documentation
 - Contributors who help improve this plugin
 
