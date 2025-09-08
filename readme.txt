@@ -4,7 +4,7 @@ Tags: alt tags, accessibility, seo, images, ai, gemini, openai, claude, media li
 Requires at least: 4.1
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.2.0
+Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -154,82 +154,24 @@ Use the "Test First 5 Images" button to preview alt tag generation before proces
 
 == Changelog ==
 
-= 1.2.0 =
-* Added support for multiple AI providers (OpenAI, Claude, OpenRouter)
-* Introduced provider selection interface
-* Added model selection for each provider
-* Improved error handling and provider-specific testing
-* Enhanced debug logging for all providers
-* Updated documentation for multi-provider support
-
-= 1.1.2 =
-* Improved prompt to avoid sensitive information in alt text
-* Better handling of decorative images
-* Enhanced description quality
-
-= 1.1.1 =
-* Added custom prompt support
-* Introduced multiple Gemini model options
-* Added gemini-2.0-flash-exp model support
-* Improved settings interface
-* Enhanced error messages
-
-= 1.1.0 =
-* Added cost-saving image size selection
-* Implemented resume capability for interrupted processing
-* Added progress percentage display
-* Improved error handling and recovery
-* Enhanced debug logging
-
-= 1.0.5 =
-* Added comprehensive test mode
-* Improved API error handling
-* Enhanced progress tracking
-* Better memory management for large libraries
-
-= 1.0.4 =
-* Added WP-CLI support
-* Implemented dry-run mode
-* Added statistics command
-* Improved batch processing
-
-= 1.0.3 =
-* Added debug mode toggle
-* Improved error messages
-* Fixed timeout issues
-* Enhanced API response handling
-
-= 1.0.2 =
-* Improved batch processing
-* Added stop/resume functionality
-* Better progress indication
-* Fixed memory leaks
-
-= 1.0.1 =
-* Enhanced UI/UX
-* Added real-time progress updates
-* Improved error handling
-* Fixed AJAX issues
 
 = 1.0.0 =
 * Initial release
-* Gemini API integration
-* Batch processing support
-* Basic settings panel
+* Support for multiple AI providers (Gemini, OpenAI, Claude, OpenRouter)
+* Batch processing with progress tracking
+* Cost optimization through configurable image sizes
+* WP-CLI support for automation
+* Custom prompt support
+* Debug mode for troubleshooting
+* Resume capability for interrupted processing
+* Test mode for previewing results
+* Comprehensive settings panel
+* Full internationalization support
 
 == Upgrade Notice ==
 
-= 1.2.0 =
-Major update! Now supports multiple AI providers including OpenAI, Claude, and OpenRouter. Upgrade to access more AI models and providers.
-
-= 1.1.2 =
-Important update for better alt text quality and sensitive content handling.
-
-= 1.1.1 =
-Adds custom prompt support and new Gemini models for better flexibility.
-
-= 1.1.0 =
-Significant performance improvements and cost optimizations. Recommended update for all users.
+= 1.0.0 =
+Initial release with support for multiple AI providers, batch processing, and WP-CLI integration.
 
 == Additional Information ==
 
