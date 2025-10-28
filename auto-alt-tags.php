@@ -204,21 +204,21 @@ class AutoAltTagGenerator {
 
 		// Enqueue admin styles
 		wp_enqueue_style(
-			'auto-alt-tags-admin',
+			'ka-alt-tags-admin',
 			AUTO_ALT_TAGS_PLUGIN_URL . 'assets/css/admin.css',
 			array(),
 			AUTO_ALT_TAGS_VERSION
 		);
 
 		wp_enqueue_script(
-			'auto-alt-tags-admin',
+			'ka-alt-tags-admin',
 			AUTO_ALT_TAGS_PLUGIN_URL . 'assets/js/admin.js',
 			array( 'jquery' ),
 			AUTO_ALT_TAGS_VERSION,
 			true
 		);
-		
-		wp_localize_script( 'auto-alt-tags-admin', 'autoAltAjax', array(
+
+		wp_localize_script( 'ka-alt-tags-admin', 'autoAltAjax', array(
 			'ajaxurl' => admin_url( 'admin-ajax.php' ),
 			'nonce'   => wp_create_nonce( 'auto_alt_nonce' ),
 		) );
@@ -350,61 +350,61 @@ class AutoAltTagGenerator {
 			<div class="card">
 				<h2 class="title"><?php esc_html_e( 'Generate Alt Tags', 'auto-alt-tags' ); ?></h2>
 				<div class="inside">
-					<div id="alt-tag-progress" style="display: none; margin-bottom: 20px;">
-						<progress id="progress-bar" max="100" value="0" style="width: 100%; height: 20px;"></progress>
+					<div id="ka_alt_progress" style="display: none; margin-bottom: 20px;">
+						<progress id="ka_alt_progress_bar" max="100" value="0" style="width: 100%; height: 20px;"></progress>
 						<p>
-							<span id="progress-text"><?php esc_html_e( 'Processing...', 'auto-alt-tags' ); ?></span>
-							<span id="progress-percentage" style="float: right;">0%</span>
+							<span id="ka_alt_progress_text"><?php esc_html_e( 'Processing...', 'auto-alt-tags' ); ?></span>
+							<span id="ka_alt_progress_percentage" style="float: right;">0%</span>
 						</p>
 					</div>
-					
-					<div id="control-buttons">
-						<button id="test-first-five" class="button button-primary" <?php echo ! $current_api_key ? 'disabled' : ''; ?>>
+
+					<div id="ka_alt_control_buttons">
+						<button id="ka_alt_test_first_five" class="button button-primary" <?php echo ! $current_api_key ? 'disabled' : ''; ?>>
 							<?php esc_html_e( 'Test on First 5 Images', 'auto-alt-tags' ); ?>
 						</button>
-						
-						<button id="start-processing" class="button button-primary" <?php echo ! $current_api_key ? 'disabled' : ''; ?>>
+
+						<button id="ka_alt_start_processing" class="button button-primary" <?php echo ! $current_api_key ? 'disabled' : ''; ?>>
 							<?php esc_html_e( 'Start Auto-Tagging All Images', 'auto-alt-tags' ); ?>
 						</button>
-						
-						<button id="test-api" class="button button-secondary" <?php echo ! $current_api_key ? 'disabled' : ''; ?>>
+
+						<button id="ka_alt_test_api" class="button button-secondary" <?php echo ! $current_api_key ? 'disabled' : ''; ?>>
 							<?php esc_html_e( 'Test API Connection', 'auto-alt-tags' ); ?>
 						</button>
-						
-						<button id="refresh-stats" class="button button-secondary">
+
+						<button id="ka_alt_refresh_stats" class="button button-secondary">
 							<?php esc_html_e( 'Refresh Statistics', 'auto-alt-tags' ); ?>
 						</button>
-						
-						<button id="stop-processing" class="button button-secondary" style="display: none;">
+
+						<button id="ka_alt_stop_processing" class="button button-secondary" style="display: none;">
 							<?php esc_html_e( 'Stop Processing', 'auto-alt-tags' ); ?>
 						</button>
 					</div>
-					
+
 					<!-- Debug Log Area -->
-					<div id="debug-log" style="display: <?php echo $this->debug_mode ? 'block' : 'none'; ?>; margin-top: 20px;">
+					<div id="ka_alt_debug_log" style="display: <?php echo $this->debug_mode ? 'block' : 'none'; ?>; margin-top: 20px;">
 						<h3><?php esc_html_e( 'Debug Log', 'auto-alt-tags' ); ?></h3>
-						<div id="log-content" style="background: #f1f1f1; padding: 10px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px;">
+						<div id="ka_alt_log_content" style="background: #f1f1f1; padding: 10px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px;">
 							<!-- Log messages will appear here -->
 						</div>
 					</div>
 				</div>
 			</div>
-			
+
 			<!-- Test Results Modal -->
-			<div id="test-results-modal" style="display: none; position: fixed; z-index: 100000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+			<div id="ka_alt_test_results_modal" style="display: none; position: fixed; z-index: 100000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
 				<div style="background-color: #fefefe; margin: 2% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 1000px; border-radius: 5px; max-height: 90%; overflow-y: auto;">
 					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
 						<h2><?php esc_html_e( 'Test Results - First 5 Images', 'auto-alt-tags' ); ?></h2>
-						<span id="close-modal" style="font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+						<span id="ka_alt_close_modal" style="font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
 					</div>
-					<div id="test-results-content">
+					<div id="ka_alt_test_results_content">
 						<!-- Results will be populated here -->
 					</div>
 					<div style="margin-top: 20px; text-align: center;">
-						<button id="proceed-with-all" class="button button-primary" style="display: none;">
+						<button id="ka_alt_proceed_with_all" class="button button-primary" style="display: none;">
 							<?php esc_html_e( 'Proceed with All Images', 'auto-alt-tags' ); ?>
 						</button>
-						<button id="close-modal-btn" class="button button-secondary">
+						<button id="ka_alt_close_modal_btn" class="button button-secondary">
 							<?php esc_html_e( 'Close', 'auto-alt-tags' ); ?>
 						</button>
 					</div>
@@ -473,23 +473,23 @@ class AutoAltTagGenerator {
 							</tr>
 							
 							<?php foreach ( $this->available_providers as $provider_key => $provider_data ) : ?>
-							<tr class="provider-setting" data-provider="<?php echo esc_attr( $provider_key ); ?>" style="display: <?php echo $selected_provider === $provider_key ? 'table-row' : 'none'; ?>;">
+							<tr class="ka_alt_provider_setting" data-provider="<?php echo esc_attr( $provider_key ); ?>" style="display: <?php echo $selected_provider === $provider_key ? 'table-row' : 'none'; ?>;">
 								<th scope="row">
 									<label for="<?php echo esc_attr( $provider_data['api_key_setting'] ); ?>"><?php echo esc_html( $provider_data['name'] ); ?> <?php esc_html_e( 'API Key', 'auto-alt-tags' ); ?></label>
 								</th>
 								<td>
 									<div style="display: flex; gap: 10px; align-items: center;">
-										<input type="password" 
-											   id="<?php echo esc_attr( $provider_data['api_key_setting'] ); ?>" 
-											   name="<?php echo esc_attr( $provider_data['api_key_setting'] ); ?>" 
-											   value="<?php echo esc_attr( get_option( $provider_data['api_key_setting'], '' ) ); ?>" 
-											   class="regular-text api-key-input" 
-											   autocomplete="new-password" 
+										<input type="password"
+											   id="<?php echo esc_attr( $provider_data['api_key_setting'] ); ?>"
+											   name="<?php echo esc_attr( $provider_data['api_key_setting'] ); ?>"
+											   value="<?php echo esc_attr( get_option( $provider_data['api_key_setting'], '' ) ); ?>"
+											   class="regular-text ka_alt_api_key_input"
+											   autocomplete="new-password"
 											   data-provider="<?php echo esc_attr( $provider_key ); ?>" />
-										<button type="button" class="button button-secondary test-api-key" data-provider="<?php echo esc_attr( $provider_key ); ?>">
+										<button type="button" class="button button-secondary ka_alt_test_api_key" data-provider="<?php echo esc_attr( $provider_key ); ?>">
 											<?php esc_html_e( 'Test Key', 'auto-alt-tags' ); ?>
 										</button>
-										<span class="test-result" id="test-result-<?php echo esc_attr( $provider_key ); ?>"></span>
+										<span class="ka_alt_test_result" id="ka_alt_test_result_<?php echo esc_attr( $provider_key ); ?>"></span>
 									</div>
 									<?php if ( 'gemini' === $provider_key ) : ?>
 										<p class="description">

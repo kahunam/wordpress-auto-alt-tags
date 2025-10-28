@@ -1,6 +1,7 @@
 /**
  * Auto Alt Tags Admin JavaScript
- * 
+ * All selectors prefixed with ka_alt_ to avoid conflicts
+ *
  * @package AutoAltTags
  * @since 1.1.0
  */
@@ -18,8 +19,8 @@
      */
     function debugLog(message) {
         console.log('[Auto Alt Tags]', message);
-        
-        const logContent = $('#log-content');
+
+        const logContent = $('#ka_alt_log_content');
         if (logContent.length) {
             const timestamp = new Date().toLocaleTimeString();
             logContent.append(`<div>${timestamp} - ${message}</div>`);
@@ -31,9 +32,9 @@
      * Update progress bar
      */
     function updateProgress(percentage, message) {
-        $('#progress-bar').val(percentage);
-        $('#progress-percentage').text(percentage + '%');
-        $('#progress-text').text(message);
+        $('#ka_alt_progress_bar').val(percentage);
+        $('#ka_alt_progress_percentage').text(percentage + '%');
+        $('#ka_alt_progress_text').text(message);
     }
 
     /**
@@ -41,8 +42,8 @@
      */
     function showErrors(errors) {
         if (!errors || errors.length === 0) return;
-        
-        const logContent = $('#log-content');
+
+        const logContent = $('#ka_alt_log_content');
         errors.forEach(function(error) {
             debugLog('ERROR: ' + error);
         });
@@ -80,7 +81,7 @@
         }
 
         debugLog('Sending request to process batch...');
-        
+
         $.ajax({
             url: autoAltAjax.ajaxurl,
             type: 'POST',
@@ -90,7 +91,7 @@
             },
             success: function(response) {
                 debugLog('Response received: ' + JSON.stringify(response));
-                
+
                 if (response.success) {
                     // Update processed count based on the message
                     // Extract processed count from message like "Processed 10/50 images"
@@ -99,15 +100,15 @@
                         processedImages = parseInt(match[1]);
                         totalImages = parseInt(match[2]);
                     }
-                    
+
                     // Calculate real progress
                     const realProgress = totalImages > 0 ? (processedImages / totalImages * 100) : 0;
                     updateProgress(realProgress.toFixed(1), response.data.message);
-                    
+
                     if (response.data.errors && response.data.errors.length > 0) {
                         showErrors(response.data.errors);
                     }
-                    
+
                     if (response.data.completed || shouldStop) {
                         debugLog('Processing completed');
                         updateProgress(100, 'Processing complete!');
@@ -143,10 +144,10 @@
         shouldStop = false;
         processedImages = 0;
         totalImages = 0;
-        $('#alt-tag-progress').hide();
-        $('#control-buttons').show();
-        $('#stop-processing').hide();
-        $('#start-processing').show();
+        $('#ka_alt_progress').hide();
+        $('#ka_alt_control_buttons').show();
+        $('#ka_alt_stop_processing').hide();
+        $('#ka_alt_start_processing').show();
     }
 
     /**
@@ -154,7 +155,7 @@
      */
     function refreshStats() {
         debugLog('Refreshing statistics...');
-        
+
         $.ajax({
             url: autoAltAjax.ajaxurl,
             type: 'POST',
@@ -180,12 +181,12 @@
      */
     function testAPIConnection() {
         debugLog('Testing API connection...');
-        
+
         // Show loading state on button
-        const $button = $('#test-api');
+        const $button = $('#ka_alt_test_api');
         const originalText = $button.text();
         $button.text('Testing...').prop('disabled', true);
-        
+
         $.ajax({
             url: autoAltAjax.ajaxurl,
             type: 'POST',
@@ -218,12 +219,12 @@
      */
     function testFirstFiveImages() {
         debugLog('Testing first 5 images...');
-        
+
         // Show loading state on button
-        const $button = $('#test-first-five');
+        const $button = $('#ka_alt_test_first_five');
         const originalText = $button.text();
         $button.text('Testing...').prop('disabled', true);
-        
+
         $.ajax({
             url: autoAltAjax.ajaxurl,
             type: 'POST',
@@ -259,24 +260,24 @@
         html += '<p><strong>' + data.message + '</strong></p>';
         html += '<p>Provider: <strong>' + data.provider + '</strong> | Model: <strong>' + data.model + '</strong></p>';
         html += '</div>';
-        
+
         if (data.results && data.results.length > 0) {
             html += '<div style="display: grid; gap: 15px;">';
-            
+
             data.results.forEach(function(result) {
                 html += '<div style="border: 1px solid #ddd; padding: 15px; border-radius: 5px; display: flex; gap: 15px;">';
-                
+
                 // Thumbnail
                 if (result.thumbnail) {
                     html += '<div style="flex-shrink: 0;">';
                     html += '<img src="' + result.thumbnail + '" alt="Thumbnail" style="width: 100px; height: 100px; object-fit: cover; border-radius: 3px;">';
                     html += '</div>';
                 }
-                
+
                 // Content
                 html += '<div style="flex-grow: 1;">';
                 html += '<h4 style="margin: 0 0 10px 0;">' + result.title + '</h4>';
-                
+
                 if (result.success) {
                     html += '<div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 10px; border-radius: 3px; margin-bottom: 10px;">';
                     html += '<strong>Generated Alt Text:</strong><br>';
@@ -287,15 +288,15 @@
                     html += '<strong>Error:</strong> ' + result.error;
                     html += '</div>';
                 }
-                
+
                 html += '<small><a href="' + result.url + '" target="_blank">View Full Image</a></small>';
                 html += '</div>';
                 html += '</div>';
             });
-            
+
             html += '</div>';
         }
-        
+
         if (data.errors && data.errors.length > 0) {
             html += '<div style="margin-top: 20px;">';
             html += '<h3>Errors:</h3>';
@@ -306,17 +307,17 @@
             html += '</ul>';
             html += '</div>';
         }
-        
+
         // Show proceed button if there were successful results
         const hasSuccess = data.results && data.results.some(r => r.success);
         if (hasSuccess) {
-            $('#proceed-with-all').show();
+            $('#ka_alt_proceed_with_all').show();
         } else {
-            $('#proceed-with-all').hide();
+            $('#ka_alt_proceed_with_all').hide();
         }
-        
-        $('#test-results-content').html(html);
-        $('#test-results-modal').show();
+
+        $('#ka_alt_test_results_content').html(html);
+        $('#ka_alt_test_results_modal').show();
     }
 
     /**
@@ -324,15 +325,15 @@
      */
     function testProviderKey(provider, apiKey, button) {
         debugLog('Testing ' + provider + ' API key...');
-        
+
         // Show loading state on button
         const originalText = button.text();
         button.text('Testing...').prop('disabled', true);
-        
+
         // Clear previous results
-        const resultSpan = $('#test-result-' + provider);
+        const resultSpan = $('#ka_alt_test_result_' + provider);
         resultSpan.html('').removeClass('success error');
-        
+
         $.ajax({
             url: autoAltAjax.ajaxurl,
             type: 'POST',
@@ -379,13 +380,13 @@
      */
     function handleProviderChange() {
         const selectedProvider = $('#auto_alt_provider').val();
-        
+
         // Hide all provider settings
-        $('.provider-setting').hide();
-        
+        $('.ka_alt_provider_setting').hide();
+
         // Show selected provider setting
-        $('.provider-setting[data-provider="' + selectedProvider + '"]').show();
-        
+        $('.ka_alt_provider_setting[data-provider="' + selectedProvider + '"]').show();
+
         // Update model dropdown based on provider
         updateModelDropdown(selectedProvider);
     }
@@ -401,32 +402,32 @@
 
     // Document ready
     $(document).ready(function() {
-        
+
         // Start processing button
-        $('#start-processing').on('click', function(e) {
+        $('#ka_alt_start_processing').on('click', function(e) {
             e.preventDefault();
-            
+
             if (isProcessing) return;
-            
+
             if (!confirm('This will generate alt tags for all images without them. Continue?')) {
                 return;
             }
-            
+
             isProcessing = true;
             shouldStop = false;
             processedImages = 0;
-            
+
             debugLog('Starting alt tag processing...');
-            
-            $('#control-buttons').hide();
-            $('#alt-tag-progress').show();
-            $('#stop-processing').show();
-            $('#start-processing').hide();
+
+            $('#ka_alt_control_buttons').hide();
+            $('#ka_alt_progress').show();
+            $('#ka_alt_stop_processing').show();
+            $('#ka_alt_start_processing').hide();
             updateProgress(0, 'Starting...');
-            
+
             // Clear debug log
-            $('#log-content').empty();
-            
+            $('#ka_alt_log_content').empty();
+
             // Get initial stats then start processing
             getInitialStats(function() {
                 if (totalImages === 0) {
@@ -438,76 +439,76 @@
                 }
             });
         });
-        
+
         // Stop processing button
-        $('#stop-processing').on('click', function(e) {
+        $('#ka_alt_stop_processing').on('click', function(e) {
             e.preventDefault();
             shouldStop = true;
             debugLog('Stop requested by user');
             $(this).text('Stopping...');
         });
-        
+
         // Test API button
-        $('#test-api').on('click', function(e) {
+        $('#ka_alt_test_api').on('click', function(e) {
             e.preventDefault();
             testAPIConnection();
         });
-        
+
         // Test first 5 images button
-        $('#test-first-five').on('click', function(e) {
+        $('#ka_alt_test_first_five').on('click', function(e) {
             e.preventDefault();
             testFirstFiveImages();
         });
-        
+
         // Modal close handlers
-        $('#close-modal, #close-modal-btn').on('click', function() {
-            $('#test-results-modal').hide();
+        $('#ka_alt_close_modal, #ka_alt_close_modal_btn').on('click', function() {
+            $('#ka_alt_test_results_modal').hide();
         });
-        
+
         // Proceed with all images button
-        $('#proceed-with-all').on('click', function() {
-            $('#test-results-modal').hide();
-            $('#start-processing').click();
+        $('#ka_alt_proceed_with_all').on('click', function() {
+            $('#ka_alt_test_results_modal').hide();
+            $('#ka_alt_start_processing').click();
         });
-        
+
         // Refresh stats button
-        $('#refresh-stats').on('click', function(e) {
+        $('#ka_alt_refresh_stats').on('click', function(e) {
             e.preventDefault();
             refreshStats();
         });
-        
+
         // Toggle debug log visibility when debug mode checkbox changes
         $('#auto_alt_debug_mode').on('change', function() {
             if ($(this).is(':checked')) {
-                $('#debug-log').show();
+                $('#ka_alt_debug_log').show();
             } else {
-                $('#debug-log').hide();
+                $('#ka_alt_debug_log').hide();
             }
         });
-        
+
         // Provider selection change handler
         $('#auto_alt_provider').on('change', function() {
             handleProviderChange();
         });
-        
+
         // Initialize provider display on page load
         handleProviderChange();
-        
+
         // Test API key buttons
-        $('.test-api-key').on('click', function(e) {
+        $('.ka_alt_test_api_key').on('click', function(e) {
             e.preventDefault();
             const provider = $(this).data('provider');
-            const apiKey = $('#auto_alt_' + provider + '_api_key').val() || 
+            const apiKey = $('#auto_alt_' + provider + '_api_key').val() ||
                            $('#auto_alt_gemini_api_key').val(); // fallback for backwards compatibility
-            
+
             if (!apiKey) {
                 alert('Please enter an API key first');
                 return;
             }
-            
+
             testProviderKey(provider, apiKey, $(this));
         });
-        
+
         // Add some visual feedback when hovering over buttons
         $('.button').on('mouseenter', function() {
             $(this).css('opacity', '0.9');
