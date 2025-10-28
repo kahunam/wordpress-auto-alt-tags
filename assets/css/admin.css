@@ -285,24 +285,154 @@
     text-decoration: underline;
 }
 
+/* Text Overflow and Wrapping Fixes */
+.form-table input[type="text"],
+.form-table input[type="password"],
+.form-table input[type="email"],
+.form-table input[type="url"],
+.form-table input[type="number"],
+.form-table textarea,
+.form-table select {
+    max-width: 100%;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.form-table textarea {
+    width: 100%;
+    max-width: 600px;
+    resize: vertical;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+.form-table .regular-text {
+    max-width: 400px;
+    width: 100%;
+}
+
+.form-table .large-text {
+    max-width: 600px;
+    width: 100%;
+}
+
+.form-table .small-text {
+    max-width: 100px;
+    width: 100%;
+}
+
+.form-table .description {
+    max-width: 600px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+
+/* API Key Input Container */
+.form-table td > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    max-width: 100%;
+}
+
+.api-key-input {
+    flex: 1;
+    min-width: 200px;
+    max-width: 400px;
+}
+
+.test-result {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Debug Log Text Overflow Fix */
+#debug-log, #log-content {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    overflow-x: auto;
+}
+
+#processing-log {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+/* Test Results and Modal Text Overflow */
+#test-results-content,
+#test-results-modal {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+#test-results-content img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Card and Container Overflow Fixes */
+.card .inside {
+    overflow: hidden;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.wrap h1, .wrap h2, .wrap h3 {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Notice Messages */
+.notice p {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+}
+
 /* Responsive Design */
 @media (max-width: 600px) {
     .stats-grid {
         grid-template-columns: 1fr;
     }
-    
+
     #control-buttons {
         flex-direction: column;
     }
-    
+
     #control-buttons .button {
         justify-content: center;
     }
-    
+
     .progress-info {
         flex-direction: column;
         gap: 5px;
         text-align: center;
+    }
+
+    .form-table .regular-text,
+    .form-table .large-text,
+    .form-table textarea {
+        max-width: 100%;
+    }
+
+    .form-table th,
+    .form-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .form-table th {
+        padding-bottom: 5px;
+    }
+
+    .api-key-input {
+        max-width: 100%;
     }
 }
 

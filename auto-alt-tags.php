@@ -201,8 +201,15 @@ class AutoAltTagGenerator {
 		if ( 'media_page_auto-alt-tags' !== $hook ) {
 			return;
 		}
-		
-		// Use WordPress default admin styles - no custom CSS needed
+
+		// Enqueue admin styles
+		wp_enqueue_style(
+			'auto-alt-tags-admin',
+			AUTO_ALT_TAGS_PLUGIN_URL . 'assets/css/admin.css',
+			array(),
+			AUTO_ALT_TAGS_VERSION
+		);
+
 		wp_enqueue_script(
 			'auto-alt-tags-admin',
 			AUTO_ALT_TAGS_PLUGIN_URL . 'assets/js/admin.js',
