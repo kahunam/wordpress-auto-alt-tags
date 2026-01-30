@@ -45,7 +45,7 @@ Choose from multiple AI providers based on your needs:
 #### Google Gemini (Recommended)
 - **Get API Key**: [Google AI Studio](https://aistudio.google.com/app/apikey)
 - **Benefits**: Generous free tier, very cost-effective, excellent image analysis
-- **Models**: Gemini 2.0 Flash, Gemini 1.5 Flash, Gemini 1.5 Pro
+- **Models**: Gemini 2.5 Flash, Gemini 2.5 Flash Lite, Gemini 3 Flash Preview, Gemini 3 Pro Preview
 
 #### OpenAI
 - **Get API Key**: [OpenAI Platform](https://platform.openai.com/api-keys)
@@ -134,7 +134,7 @@ wp auto-alt generate --limit=100
 |---------|-------------|---------|
 | **AI Provider** | Choose your preferred AI service | Gemini |
 | **API Key** | Provider-specific API key with real-time testing | None |
-| **AI Model** | Model selection (updates based on provider) | gemini-2.0-flash |
+| **AI Model** | Model selection (updates based on provider) | gemini-2.5-flash |
 | **Batch Size** | Images processed per batch (1-50) | 10 |
 | **Image Size for API** | WordPress thumbnail size to use | medium |
 | **Custom Prompt** | Override the default prompt (optional) | See below |
@@ -143,10 +143,10 @@ wp auto-alt generate --limit=100
 ### Available Models by Provider
 
 #### Gemini Models
-- **Gemini 2.0 Flash** - Recommended: Fast & efficient, very cost-effective
-- **Gemini 1.5 Flash** - Previous generation, still capable
-- **Gemini 1.5 Flash 8B** - Smallest model, fastest processing
-- **Gemini 1.5 Pro** - Most capable, highest quality
+- **Gemini 2.5 Flash** - Recommended: Best price-performance, very cost-effective
+- **Gemini 2.5 Flash Lite** - Cost-effective lightweight option
+- **Gemini 3 Flash Preview** - Latest with advanced vision capabilities
+- **Gemini 3 Pro Preview** - Most capable, highest quality reasoning
 
 #### OpenAI Models
 - **GPT-4o** - Latest vision-capable model
@@ -179,7 +179,7 @@ The plugin includes several features to minimize API costs:
 - **WordPress Thumbnails**: Uses existing thumbnail sizes instead of full images (saves ~80% on credits)
 - **Smart Filtering**: Only processes images without existing alt text
 - **Batch Processing**: Prevents API rate limiting with configurable delays
-- **Efficient Models**: Defaults to cost-effective options (Gemini 2.0 Flash recommended)
+- **Efficient Models**: Defaults to cost-effective options (Gemini 2.5 Flash recommended)
 - **Provider Choice**: Compare costs across different AI providers
 - **Test First**: Use "Test on First 5 Images" to estimate costs before batch processing
 

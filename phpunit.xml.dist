@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<phpunit
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.6/phpunit.xsd"
+	bootstrap="tests/bootstrap.php"
+	backupGlobals="false"
+	colors="true"
+	beStrictAboutTestsThatDoNotTestAnything="true"
+	beStrictAboutOutputDuringTests="true"
+>
+	<testsuites>
+		<testsuite name="Auto Alt Tags Test Suite">
+			<directory suffix=".php">./tests/</directory>
+			<exclude>./tests/mocks</exclude>
+			<exclude>./tests/bootstrap.php</exclude>
+			<exclude>./tests/index.php</exclude>
+		</testsuite>
+	</testsuites>
+
+	<coverage processUncoveredFiles="true">
+		<include>
+			<directory suffix=".php">./</directory>
+		</include>
+		<exclude>
+			<directory>./tests</directory>
+			<directory>./vendor</directory>
+			<directory>./bin</directory>
+			<directory>./dist</directory>
+		</exclude>
+		<report>
+			<html outputDirectory="tests/coverage"/>
+			<text outputFile="php://stdout"/>
+		</report>
+	</coverage>
+
+	<php>
+		<const name="AUTO_ALT_TAGS_TESTING" value="true"/>
+		<const name="HOUR_IN_SECONDS" value="3600"/>
+	</php>
+</phpunit>

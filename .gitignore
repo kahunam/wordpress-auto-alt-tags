@@ -1,1 +1,39 @@
+# OS files
 .DS_Store
+Thumbs.db
+
+# IDE/Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Internal reports and security documents (not for public distribution)
+SECURITY_AUDIT_REPORT.md
+WORDPRESS_SUBMISSION_REPORT.md
+*_AUDIT_*.md
+*_SECURITY_*.md
+
+# Test artifacts
+/tests/coverage/
+.phpunit.result.cache
+phpunit.xml
+
+# Dependencies (if using composer)
+/vendor/
+composer.lock
+
+# Environment files
+.env
+.env.*
+
+# WordPress specific
+*.log
+debug.log
+wp-config.php
+
+# Build artifacts
+/dist/
+/build/
+*.zip

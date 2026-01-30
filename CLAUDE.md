@@ -4,16 +4,43 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-This WordPress plugin has no build process - it uses pure PHP/JavaScript without compilation steps.
+### Build & Distribution
+```bash
+# Install dependencies
+composer install
+
+# Run WordPress plugin requirement checks
+composer check
+
+# Build distribution package (runs checks + creates zip)
+composer build
+
+# Build without checks (not recommended)
+composer build:skip-checks
+
+# Output: dist/auto-alt-tags-X.Y.Z.zip
+```
 
 ### Testing Commands
 ```bash
-# Test WP-CLI commands (requires WordPress environment)
+# Run PHPUnit tests (standalone, no WordPress required)
+composer test
+
+# Run tests with coverage report
+composer test:coverage
+
+# Run WordPress coding standards check
+composer phpcs
+
+# Auto-fix coding standards issues
+composer phpcbf
+```
+
+### WP-CLI Commands (requires WordPress)
+```bash
 wp auto-alt stats
 wp auto-alt test-api
 wp auto-alt generate --dry-run
-
-# Test plugin in WordPress admin at: Media → Auto Alt Tags
 ```
 
 ### WordPress Environment Setup
@@ -46,7 +73,7 @@ ln -s /path/to/repo /path/to/wordpress/wp-content/plugins/auto-alt-tags
 **Gemini API Communication**
 - Uses `wp_remote_post()` for HTTP requests (WordPress standard)
 - Base64 image encoding for API transmission
-- Configurable models: gemini-2.0-flash (default), gemini-1.5-flash, gemini-1.5-pro, gemini-1.5-flash-8b
+- Configurable models: gemini-2.5-flash (default), gemini-2.5-flash-lite, gemini-3-flash-preview, gemini-3-pro-preview
 - Custom prompt support with smart defaults
 
 **Processing Architecture**
@@ -79,7 +106,7 @@ ln -s /path/to/repo /path/to/wordpress/wp-content/plugins/auto-alt-tags
 
 ### Available Settings
 - `auto_alt_gemini_api_key`: API key storage
-- `auto_alt_model_name`: Gemini model selection (default: gemini-2.0-flash)
+- `auto_alt_model_name`: Gemini model selection (default: gemini-2.5-flash)
 - `auto_alt_batch_size`: Processing batch size (1-50, default: 10)
 - `auto_alt_image_size`: WordPress thumbnail size for API calls (default: medium)
 - `auto_alt_debug_mode`: Debug logging toggle
@@ -121,7 +148,14 @@ ln -s /path/to/repo /path/to/wordpress/wp-content/plugins/auto-alt-tags
 
 ## Testing Approach
 
-### Manual Testing Scenarios (from CONTRIBUTING.md)
+### PHPUnit Tests (Standalone)
+Tests can run without WordPress using mock functions:
+- `tests/test-api-calls.php` - API URL formats, response parsing, model validation
+- `tests/test-providers.php` - Provider-specific request/response handling
+- `tests/test-plugin-integration.php` - Settings, options, transients
+- `tests/test-security.php` - Input sanitization, output escaping, validation
+
+### Manual Testing Scenarios
 - Different WordPress versions (5.0+) and PHP versions (7.4+)
 - Multiple browsers and devices for admin interface
 - Large media libraries for performance testing
