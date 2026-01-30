@@ -26,7 +26,10 @@
 		"test": "phpunit",
 		"test:coverage": "phpunit --coverage-html tests/coverage",
 		"phpcs": "phpcs --standard=WordPress .",
-		"phpcbf": "phpcbf --standard=WordPress ."
+		"phpcbf": "phpcbf --standard=WordPress .",
+		"check": "php bin/wp-plugin-check.php",
+		"build": "bash bin/build.sh",
+		"build:skip-checks": "bash bin/build.sh --skip-checks"
 	},
 	"config": {
 		"allow-plugins": {
