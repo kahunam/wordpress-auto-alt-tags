@@ -60,10 +60,10 @@ class AutoAltTagGenerator {
 			'name' => 'Google Gemini',
 			'api_key_setting' => 'auto_alt_gemini_api_key',
 			'models' => array(
-				'gemini-2.0-flash' => 'Gemini 2.0 Flash (Recommended - Fast & Efficient)',
-				'gemini-1.5-flash' => 'Gemini 1.5 Flash',
-				'gemini-1.5-flash-8b' => 'Gemini 1.5 Flash 8B (Smallest)',
-				'gemini-1.5-pro' => 'Gemini 1.5 Pro (Most Capable)',
+				'gemini-2.5-flash' => 'Gemini 2.5 Flash (Recommended - Best Price/Performance)',
+				'gemini-2.5-flash-lite' => 'Gemini 2.5 Flash Lite (Cost Effective)',
+				'gemini-3-flash-preview' => 'Gemini 3 Flash Preview (Latest - Advanced Vision)',
+				'gemini-3-pro-preview' => 'Gemini 3 Pro Preview (Most Capable)',
 			),
 		),
 		'openai' => array(
@@ -143,7 +143,7 @@ class AutoAltTagGenerator {
 	 *
 	 * @var string
 	 */
-	private string $model_name = 'gemini-2.0-flash';
+	private string $model_name = 'gemini-2.5-flash';
 	
 	/**
 	 * Debug mode flag
@@ -176,7 +176,7 @@ class AutoAltTagGenerator {
 		// Initialize settings
 		$this->current_provider = get_option( 'auto_alt_provider', 'gemini' );
 		$this->current_api_key = $this->get_current_api_key( $this->current_provider );
-		$this->model_name = get_option( 'auto_alt_model_name', 'gemini-2.0-flash' );
+		$this->model_name = get_option( 'auto_alt_model_name', 'gemini-2.5-flash' );
 		$this->debug_mode = (bool) get_option( 'auto_alt_debug_mode', false );
 		
 		// Load WP-CLI command if available
@@ -255,7 +255,7 @@ class AutoAltTagGenerator {
 		
 		register_setting( 'auto_alt_tags_settings', 'auto_alt_model_name', array(
 			'sanitize_callback' => 'sanitize_text_field',
-			'default'           => 'gemini-2.0-flash',
+			'default'           => 'gemini-2.5-flash',
 		) );
 		
 		register_setting( 'auto_alt_tags_settings', 'auto_alt_batch_size', array(
@@ -543,7 +543,7 @@ class AutoAltTagGenerator {
 										$current_models = $this->get_available_models();
 										foreach ( $current_models as $model => $description ) : 
 										?>
-											<option value="<?php echo esc_attr( $model ); ?>" <?php selected( get_option( 'auto_alt_model_name', 'gemini-2.0-flash' ), $model ); ?>>
+											<option value="<?php echo esc_attr( $model ); ?>" <?php selected( get_option( 'auto_alt_model_name', 'gemini-2.5-flash' ), $model ); ?>>
 												<?php echo esc_html( $description ); ?>
 											</option>
 										<?php endforeach; ?>
@@ -736,7 +736,7 @@ class AutoAltTagGenerator {
 	 * @return array Result array
 	 */
 	private function test_gemini_connection( string $api_key ): array {
-		$model = get_option( 'auto_alt_model_name', 'gemini-2.0-flash' );
+		$model = get_option( 'auto_alt_model_name', 'gemini-2.5-flash' );
 		$api_url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent?key=' . $api_key;
 		
 		$payload = array(
@@ -1325,11 +1325,11 @@ class AutoAltTagGenerator {
 		$prompt = ! empty( $custom_prompt ) ? $custom_prompt : $this->default_prompt;
 		
 		// Use the selected model and validate it
-		$model = get_option( 'auto_alt_model_name', 'gemini-2.0-flash' );
+		$model = get_option( 'auto_alt_model_name', 'gemini-2.5-flash' );
 		$available_models = $this->available_providers['gemini']['models'];
 		if ( ! array_key_exists( $model, $available_models ) ) {
-			$model = 'gemini-2.0-flash'; // Fallback to default if invalid
-			$this->debug_log( 'Invalid model name detected, using default: gemini-2.0-flash' );
+			$model = 'gemini-2.5-flash'; // Fallback to default if invalid
+			$this->debug_log( 'Invalid model name detected, using default: gemini-2.5-flash' );
 		}
 		$api_url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent?key=' . $api_key;
 		
@@ -1753,7 +1753,7 @@ class AutoAltTagGenerator {
 			'results' => $results,
 			'errors' => $errors,
 			'provider' => $this->available_providers[ $current_provider ]['name'] ?? $current_provider,
-			'model' => get_option( 'auto_alt_model_name', 'gemini-2.0-flash' ),
+			'model' => get_option( 'auto_alt_model_name', 'gemini-2.5-flash' ),
 		) );
 	}
 	
@@ -1868,7 +1868,7 @@ register_activation_hook( __FILE__, function () {
 	add_option( 'auto_alt_provider', 'gemini' );
 	add_option( 'auto_alt_batch_size', 10 );
 	add_option( 'auto_alt_image_size', 'medium' );
-	add_option( 'auto_alt_model_name', 'gemini-2.0-flash' );
+	add_option( 'auto_alt_model_name', 'gemini-2.5-flash' );
 	add_option( 'auto_alt_debug_mode', false );
 	add_option( 'auto_alt_custom_prompt', '' );
 	add_option( 'auto_alt_gemini_api_key', '' );

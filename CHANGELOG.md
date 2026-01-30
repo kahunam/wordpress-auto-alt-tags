@@ -4,6 +4,21 @@ All notable changes to the Auto Alt Tags plugin will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-01-30
+
+### Changed
+- **Updated Gemini Models** - Migrated to current supported models
+  - Removed deprecated/retired models: `gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-1.5-flash-8b`, `gemini-1.5-pro`
+  - Added new models: `gemini-2.5-flash` (default), `gemini-2.5-flash-lite`, `gemini-3-flash-preview`, `gemini-3-pro-preview`
+  - Default model changed from `gemini-2.0-flash` to `gemini-2.5-flash`
+- **Documentation Updates** - Updated all documentation to reflect new model names
+
+### Notes
+- Gemini 1.5 models have been retired by Google and return 404 errors
+- Gemini 2.0 Flash is deprecated and scheduled for shutdown on March 31, 2026
+- Gemini 2.5 Flash is the recommended model for production use
+- Gemini 3 models are available in preview for advanced vision capabilities
+
 ## [1.1.0] - 2025-05-27
 
 ### Added
@@ -17,10 +32,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Checks model availability
   - Displays test response
 - **Model Selection** - Choose from available Gemini models
-  - Gemini 2.0 Flash (recommended)
-  - Gemini 1.5 Flash
-  - Gemini 1.5 Flash 8B (smallest)
-  - Gemini 1.5 Pro (most capable)
+  - Gemini 2.5 Flash (recommended)
+  - Gemini 2.5 Flash Lite (cost-effective)
+  - Gemini 3 Flash Preview (latest)
+  - Gemini 3 Pro Preview (most capable)
 - **WordPress Thumbnail Support** - Use existing WordPress image sizes
   - Dropdown to select from registered image sizes
   - Eliminates custom image resizing code
@@ -194,7 +209,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Upgrading from 1.0.1 to 1.1.0
 - **No breaking changes** - the update is fully backward compatible
-- **Model change**: The default model has changed from the non-existent `gemini-2.5-flash-preview-05-20` to `gemini-2.0-flash`
+- **Model change**: The default model has changed to `gemini-2.5-flash` (current recommended model)
 - **Settings update**: Visit the settings page to select your preferred model
 - **UI improvements**: Custom CSS is no longer needed and can be removed
 

@@ -28,7 +28,7 @@ Automatically generate descriptive alt tags for images using AI (Gemini, OpenAI,
 
 = Supported AI Providers =
 
-* **Google Gemini** - Fast, cost-effective, supports latest models including gemini-2.0-flash
+* **Google Gemini** - Fast, cost-effective, supports latest models including gemini-2.5-flash and gemini-3-flash-preview
 * **OpenAI** - GPT-4 Vision and GPT-4o models
 * **Anthropic Claude** - Claude 3 models with vision capabilities
 * **OpenRouter** - Access multiple AI models through one API
@@ -104,7 +104,7 @@ Yes, the plugin is completely free. You only pay for the AI API usage based on y
 
 = How much does it cost to generate alt tags? =
 
-Costs vary by provider and model. With Gemini 2.0 Flash (default):
+Costs vary by provider and model. With Gemini 2.5 Flash (default):
 * Approximately $0.01-0.02 per 100 images
 * Using medium-sized images (default) reduces costs by 70-90%
 
