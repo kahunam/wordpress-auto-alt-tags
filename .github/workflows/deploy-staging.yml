@@ -1,0 +1,54 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+
+env:
+  # Hostinger shared hosting uses port 65002, VPS uses 22
+  # Override via STAGING_SSH_PORT secret if needed
+  DEFAULT_SSH_PORT: 65002
+
+jobs:
+  deploy:
+    name: Deploy plugin to Staging
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ secrets.STAGING_SSH_PORT || env.DEFAULT_SSH_PORT }} ${{ secrets.STAGING_SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Deploy plugin files via rsync
+        run: |
+          rsync -avz --delete \
+            --exclude='.*' \
+            --exclude='*.md' \
+            --exclude='*.json' \
+            --exclude='docs' \
+            --exclude='drafts' \
+            --exclude='content-generation-guides' \
+            --exclude='loading-bay' \
+            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.STAGING_SSH_PORT || env.DEFAULT_SSH_PORT }} -o StrictHostKeyChecking=no" \
+            ./ \
+            ${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SSH_HOST }}:${{ secrets.STAGING_PLUGIN_PATH }}/
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
+
+      - name: Deployment Summary
+        run: |
+          echo "## Staging Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** staging" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed at:** $(date -u)" >> $GITHUB_STEP_SUMMARY

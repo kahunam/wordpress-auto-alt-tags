@@ -1,0 +1,77 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  # Hostinger shared hosting uses port 65002, VPS uses 22
+  # Override via PROD_SSH_PORT secret if needed
+  DEFAULT_SSH_PORT: 65002
+
+jobs:
+  deploy:
+    name: Deploy Theme to Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ secrets.PROD_SSH_PORT || env.DEFAULT_SSH_PORT }} ${{ secrets.PROD_SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Verify target path exists
+        run: |
+          SSH_PORT="${{ secrets.PROD_SSH_PORT }}"
+          SSH_PORT="${SSH_PORT:-${{ env.DEFAULT_SSH_PORT }}}"
+          ssh -i ~/.ssh/deploy_key -p ${SSH_PORT} -o StrictHostKeyChecking=no \
+            ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }} \
+            "ls -la ${{ secrets.PROD_THEME_PATH }}/ && cat ${{ secrets.PROD_THEME_PATH }}/css/single-post.css | head -10"
+
+      - name: Deploy theme files via rsync
+        run: |
+          SSH_PORT="${{ secrets.PROD_SSH_PORT }}"
+          SSH_PORT="${SSH_PORT:-${{ env.DEFAULT_SSH_PORT }}}"
+
+          rsync -avz --delete --checksum \
+            --exclude='.*' \
+            --exclude='*.md' \
+            --exclude='*.json' \
+            --exclude='docs' \
+            --exclude='drafts' \
+            --exclude='content-generation-guides' \
+            --exclude='loading-bay' \
+            -e "ssh -i ~/.ssh/deploy_key -p ${SSH_PORT} -o StrictHostKeyChecking=no" \
+            ./ \
+            "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}:${{ secrets.PROD_THEME_PATH }}/"
+
+      - name: Verify deployment
+        run: |
+          SSH_PORT="${{ secrets.PROD_SSH_PORT }}"
+          SSH_PORT="${SSH_PORT:-${{ env.DEFAULT_SSH_PORT }}}"
+          ssh -i ~/.ssh/deploy_key -p ${SSH_PORT} -o StrictHostKeyChecking=no \
+            ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }} \
+            "cat ${{ secrets.PROD_THEME_PATH }}/css/single-post.css | head -10"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
+
+      - name: Deployment Summary
+        run: |
+          echo "## Production Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** main" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed at:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Files Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "- style.css" >> $GITHUB_STEP_SUMMARY
+          echo "- functions.php" >> $GITHUB_STEP_SUMMARY
