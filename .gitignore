@@ -37,3 +37,4 @@ wp-config.php
 /dist/
 /build/
 *.zip
+tests
