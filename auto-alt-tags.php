@@ -237,8 +237,10 @@ class AutoAltTagGenerator {
 		);
 
 		wp_localize_script( 'ka-alt-tags-admin', 'autoAltAjax', array(
-			'ajaxurl' => admin_url( 'admin-ajax.php' ),
-			'nonce'   => wp_create_nonce( 'auto_alt_nonce' ),
+			'ajaxurl'     => admin_url( 'admin-ajax.php' ),
+			'nonce'       => wp_create_nonce( 'auto_alt_nonce' ),
+			'rateLimits'  => $this->get_model_rate_limits(),
+			'modelNames'  => $this->available_providers['gemini']['models'],
 		) );
 	}
 	
@@ -553,6 +555,7 @@ class AutoAltTagGenerator {
 											?>
 										</p>
 									<?php endif; ?>
+									<div id="ka_alt_rate_limit_result_<?php echo esc_attr( $provider_key ); ?>" style="display:none;margin-top:10px;"></div>
 								</td>
 							</tr>
 							<?php endforeach; ?>

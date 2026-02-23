@@ -321,6 +321,58 @@
     }
 
     /**
+     * Show rate limit info for the current Gemini model after a successful key test
+     */
+    function showRateLimitInfo(provider) {
+        const $container = $('#ka_alt_rate_limit_result_' + provider);
+        if (!$container.length) return;
+
+        if (provider !== 'gemini' || !autoAltAjax.rateLimits) {
+            $container.hide();
+            return;
+        }
+
+        const selectedModel = $('#auto_alt_model_name').val() || 'gemini-2.5-flash';
+        const limits = autoAltAjax.rateLimits[selectedModel];
+        const modelName = (autoAltAjax.modelNames && autoAltAjax.modelNames[selectedModel])
+            ? autoAltAjax.modelNames[selectedModel]
+            : selectedModel;
+
+        if (!limits) {
+            $container.hide();
+            return;
+        }
+
+        const html =
+            '<div style="background:#f0fdf4;border:1px solid #86efac;border-left:4px solid #22c55e;padding:10px 14px;border-radius:4px;font-size:13px;margin-top:8px;">' +
+                '<strong style="display:block;margin-bottom:6px;">✓ API key valid &mdash; Free-tier rate limits for <em>' + modelName + '</em>:</strong>' +
+                '<table style="border-collapse:collapse;">' +
+                    '<tr>' +
+                        '<td style="padding:2px 12px 2px 0;color:#555;">Requests / minute (RPM)</td>' +
+                        '<td style="font-weight:bold;">' + limits.rpm + '</td>' +
+                    '</tr>' +
+                    '<tr>' +
+                        '<td style="padding:2px 12px 2px 0;color:#555;">Requests / day (RPD)</td>' +
+                        '<td style="font-weight:bold;">' + limits.rpd.toLocaleString() + '</td>' +
+                    '</tr>' +
+                    '<tr>' +
+                        '<td style="padding:2px 12px 2px 0;color:#555;">Tokens / minute (TPM)</td>' +
+                        '<td style="font-weight:bold;">' + limits.tpm.toLocaleString() + '</td>' +
+                    '</tr>' +
+                    '<tr>' +
+                        '<td style="padding:2px 12px 2px 0;color:#555;">Safe batch size</td>' +
+                        '<td style="font-weight:bold;">' + limits.max_batch + ' images</td>' +
+                    '</tr>' +
+                '</table>' +
+                '<p style="margin:6px 0 0;color:#555;font-size:12px;">' +
+                    'Batch processing will pause ' + limits.sleep + 's between each API call to stay within the RPM limit.' +
+                '</p>' +
+            '</div>';
+
+        $container.html(html).show();
+    }
+
+    /**
      * Test individual provider API key
      */
     function testProviderKey(provider, apiKey, button) {
@@ -333,6 +385,7 @@
         // Clear previous results
         const resultSpan = $('#ka_alt_test_result_' + provider);
         resultSpan.html('').removeClass('success error');
+        $('#ka_alt_rate_limit_result_' + provider).hide();
 
         $.ajax({
             url: autoAltAjax.ajaxurl,
@@ -351,6 +404,7 @@
                         'font-weight': 'bold',
                         'margin-left': '10px'
                     });
+                    showRateLimitInfo(provider);
                 } else {
                     debugLog(provider + ' API test failed: ' + response.data);
                     resultSpan.html('✗ Invalid').addClass('error').css({
@@ -489,6 +543,14 @@
         // Provider selection change handler
         $('#auto_alt_provider').on('change', function() {
             handleProviderChange();
+        });
+
+        // Re-render rate limit info when model changes (if key already tested valid)
+        $('#auto_alt_model_name').on('change', function() {
+            const provider = $('#auto_alt_provider').val();
+            if ($('#ka_alt_rate_limit_result_' + provider).is(':visible')) {
+                showRateLimitInfo(provider);
+            }
         });
 
         // Initialize provider display on page load
