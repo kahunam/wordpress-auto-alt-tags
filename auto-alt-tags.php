@@ -413,7 +413,7 @@ class AutoAltTagGenerator {
 			<?php endif; ?>
 
 			<!-- Two-column layout: left = controls, right = settings -->
-			<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
+			<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; margin-bottom: 20px;">
 			<div><!-- left column -->
 
 			<!-- Processing Section -->
@@ -487,37 +487,6 @@ class AutoAltTagGenerator {
 				</div>
 			</div>
 			
-			<!-- Cost and Security Information -->
-			<div class="card" style="margin-top: 20px; border-left: 4px solid #ffb900;">
-				<h2 class="title"><?php esc_html_e( 'Important: Cost & Security Information', 'auto-alt-tags' ); ?></h2>
-				<div class="inside">
-					<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
-						<div>
-							<h3><?php esc_html_e( '💰 API Costs', 'auto-alt-tags' ); ?></h3>
-							<ul>
-								<li><?php esc_html_e( 'Each image processed uses API credits/tokens', 'auto-alt-tags' ); ?></li>
-								<li><?php esc_html_e( 'Costs vary by provider and model selected', 'auto-alt-tags' ); ?></li>
-								<li><?php esc_html_e( 'Gemini Flash models are recommended, as they are very cost-effective', 'auto-alt-tags' ); ?></li>
-								<li><?php esc_html_e( 'You can try "Test on First 5 Images" to test first before running on a large batch', 'auto-alt-tags' ); ?></li>
-								<li><?php esc_html_e( 'Monitor your usage and costs on provider dashboards', 'auto-alt-tags' ); ?></li>
-							</ul>
-						</div>
-						<div>
-							<h3><?php esc_html_e( '🔒 Security Best Practices', 'auto-alt-tags' ); ?></h3>
-							<ul>
-								<li><?php esc_html_e( 'Rotate API keys regularly', 'auto-alt-tags' ); ?></li>
-								<li><?php esc_html_e( 'Set spending limits on provider accounts', 'auto-alt-tags' ); ?></li>
-								<li><?php esc_html_e( 'Monitor API usage for unexpected activity', 'auto-alt-tags' ); ?></li>
-								<li><?php esc_html_e( 'Review generated alt text before publishing', 'auto-alt-tags' ); ?></li>
-							</ul>
-						</div>
-					</div>
-					<div style="background: #f0f6fc; border: 1px solid #0969da; padding: 15px; border-radius: 5px;">
-						<strong><?php esc_html_e( 'Recommendation:', 'auto-alt-tags' ); ?></strong>
-						<?php esc_html_e( 'Start with the "Test on First 5 Images" feature to verify quality and cost before processing all images. This helps you adjust settings and prompts to achieve the best results.', 'auto-alt-tags' ); ?>
-					</div>
-				</div>
-			</div>
 			</div><!-- end left column -->
 			<div><!-- right column / Settings -->
 
@@ -773,6 +742,38 @@ class AutoAltTagGenerator {
 			</div>
 			</div><!-- end right column -->
 			</div><!-- end two-column grid -->
+
+			<!-- Cost and Security Information -->
+			<div class="card" style="border-left: 4px solid #ffb900;">
+				<h2 class="title"><?php esc_html_e( 'Important: Cost & Security Information', 'auto-alt-tags' ); ?></h2>
+				<div class="inside">
+					<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+						<div>
+							<h3><?php esc_html_e( '💰 API Costs', 'auto-alt-tags' ); ?></h3>
+							<ul>
+								<li><?php esc_html_e( 'Each image processed uses API credits/tokens', 'auto-alt-tags' ); ?></li>
+								<li><?php esc_html_e( 'Costs vary by provider and model selected', 'auto-alt-tags' ); ?></li>
+								<li><?php esc_html_e( 'Gemini Flash models are recommended, as they are very cost-effective', 'auto-alt-tags' ); ?></li>
+								<li><?php esc_html_e( 'You can try "Test on First 5 Images" to test first before running on a large batch', 'auto-alt-tags' ); ?></li>
+								<li><?php esc_html_e( 'Monitor your usage and costs on provider dashboards', 'auto-alt-tags' ); ?></li>
+							</ul>
+						</div>
+						<div>
+							<h3><?php esc_html_e( '🔒 Security Best Practices', 'auto-alt-tags' ); ?></h3>
+							<ul>
+								<li><?php esc_html_e( 'Rotate API keys regularly', 'auto-alt-tags' ); ?></li>
+								<li><?php esc_html_e( 'Set spending limits on provider accounts', 'auto-alt-tags' ); ?></li>
+								<li><?php esc_html_e( 'Monitor API usage for unexpected activity', 'auto-alt-tags' ); ?></li>
+								<li><?php esc_html_e( 'Review generated alt text before publishing', 'auto-alt-tags' ); ?></li>
+							</ul>
+						</div>
+					</div>
+					<div style="background: #f0f6fc; border: 1px solid #0969da; padding: 15px; border-radius: 5px;">
+						<strong><?php esc_html_e( 'Recommendation:', 'auto-alt-tags' ); ?></strong>
+						<?php esc_html_e( 'Start with the "Test on First 5 Images" feature to verify quality and cost before processing all images. This helps you adjust settings and prompts to achieve the best results.', 'auto-alt-tags' ); ?>
+					</div>
+				</div>
+			</div>
 		</div>
 		<?php
 	}
