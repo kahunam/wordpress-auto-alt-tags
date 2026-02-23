@@ -456,6 +456,95 @@
     }
 
     /**
+     * Render the rate limits table for the selected provider/model
+     */
+    function renderRateLimits(provider) {
+        const $row     = $('#ka_alt_rate_limits_row');
+        const $content = $('#ka_alt_rate_limits_content');
+        const limits   = autoAltAjax.providerLimits;
+        if (!limits || !limits[provider]) { $row.hide(); return; }
+
+        const providerData = limits[provider];
+        const selectedModel = $('#auto_alt_model_name').val();
+        let html = '';
+
+        if (provider === 'gemini') {
+            const models = providerData.models || {};
+            if (!Object.keys(models).length) { $row.hide(); return; }
+            html += '<div style="background:#fff8e1;border:1px solid #ffcc02;border-left:4px solid #ffb900;padding:12px 15px;border-radius:4px;font-size:13px;">';
+            html += '<strong>Google AI Studio &mdash; Free Tier Limits</strong>';
+            html += '<table style="margin-top:8px;border-collapse:collapse;width:100%;max-width:500px;">';
+            html += '<thead><tr style="background:rgba(0,0,0,0.05);">';
+            html += '<th style="text-align:left;padding:4px 8px;">Model</th>';
+            html += '<th style="text-align:center;padding:4px 8px;">RPM</th>';
+            html += '<th style="text-align:center;padding:4px 8px;">RPD</th>';
+            html += '<th style="text-align:center;padding:4px 8px;">TPM</th>';
+            html += '</tr></thead><tbody>';
+            const modelNames = autoAltAjax.modelNames || {};
+            Object.keys(models).forEach(function(mKey) {
+                const lim = models[mKey];
+                const isCurrent = (mKey === selectedModel);
+                const style = isCurrent ? ' style="font-weight:bold;background:rgba(255,185,0,0.12);"' : '';
+                html += '<tr' + style + '>';
+                html += '<td style="padding:4px 8px;">' + (modelNames[mKey] || mKey) + '</td>';
+                html += '<td style="text-align:center;padding:4px 8px;">' + lim.rpm + '</td>';
+                html += '<td style="text-align:center;padding:4px 8px;">' + (lim.rpd ? lim.rpd.toLocaleString() : '&mdash;') + '</td>';
+                html += '<td style="text-align:center;padding:4px 8px;">' + (lim.tpm ? lim.tpm.toLocaleString() : '&mdash;') + '</td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            html += '<p style="margin:8px 0 0;color:#555;">Batch size and inter-call delays are automatically capped to stay within these limits. ';
+            html += '<a href="' + (providerData.docs || '#') + '" target="_blank" rel="noopener noreferrer">View live limits &rarr;</a></p>';
+            html += '</div>';
+
+        } else if (provider === 'openai') {
+            const models = providerData.models || {};
+            const lim = models[selectedModel];
+            if (!lim) { $row.hide(); return; }
+            html += '<div style="background:#fff8e1;border:1px solid #ffcc02;border-left:4px solid #ffb900;padding:12px 15px;border-radius:4px;font-size:13px;">';
+            html += '<strong>OpenAI &mdash; ' + providerData.tier + ' Limits for <em>' + selectedModel + '</em></strong>';
+            html += '<table style="margin-top:8px;border-collapse:collapse;">';
+            html += '<tr><td style="padding:3px 14px 3px 0;color:#555;">Requests / minute (RPM)</td><td style="font-weight:bold;">' + lim.rpm + '</td></tr>';
+            html += '<tr><td style="padding:3px 14px 3px 0;color:#555;">Requests / day (RPD)</td><td style="font-weight:bold;">' + (lim.rpd ? lim.rpd.toLocaleString() : '&mdash;') + '</td></tr>';
+            html += '<tr><td style="padding:3px 14px 3px 0;color:#555;">Tokens / minute (TPM)</td><td style="font-weight:bold;">' + (lim.tpm ? lim.tpm.toLocaleString() : '&mdash;') + '</td></tr>';
+            html += '</table>';
+            html += '<p style="margin:6px 0 0;color:#555;font-size:12px;">Upgrade to higher tiers for increased limits. <a href="' + (providerData.docs || '#') + '" target="_blank" rel="noopener noreferrer">View docs &rarr;</a></p>';
+            html += '</div>';
+
+        } else if (provider === 'claude') {
+            const models = providerData.models || {};
+            const lim = models[selectedModel];
+            if (!lim) { $row.hide(); return; }
+            html += '<div style="background:#fff8e1;border:1px solid #ffcc02;border-left:4px solid #ffb900;padding:12px 15px;border-radius:4px;font-size:13px;">';
+            html += '<strong>Anthropic &mdash; ' + providerData.tier + ' Limits for <em>' + selectedModel + '</em></strong>';
+            html += '<table style="margin-top:8px;border-collapse:collapse;">';
+            html += '<tr><td style="padding:3px 14px 3px 0;color:#555;">Requests / minute (RPM)</td><td style="font-weight:bold;">' + lim.rpm + '</td></tr>';
+            html += '<tr><td style="padding:3px 14px 3px 0;color:#555;">Input tokens / minute (ITPM)</td><td style="font-weight:bold;">' + (lim.itpm ? lim.itpm.toLocaleString() : '&mdash;') + '</td></tr>';
+            html += '<tr><td style="padding:3px 14px 3px 0;color:#555;">Output tokens / minute (OTPM)</td><td style="font-weight:bold;">' + (lim.otpm ? lim.otpm.toLocaleString() : '&mdash;') + '</td></tr>';
+            html += '</table>';
+            html += '<p style="margin:6px 0 0;color:#555;font-size:12px;">Limits apply per model class. <a href="' + (providerData.docs || '#') + '" target="_blank" rel="noopener noreferrer">View docs &rarr;</a></p>';
+            html += '</div>';
+
+        } else if (provider === 'openrouter') {
+            const lim = providerData.all || {};
+            html += '<div style="background:#fff8e1;border:1px solid #ffcc02;border-left:4px solid #ffb900;padding:12px 15px;border-radius:4px;font-size:13px;">';
+            html += '<strong>OpenRouter &mdash; ' + providerData.tier + ' Limits</strong>';
+            html += '<table style="margin-top:8px;border-collapse:collapse;">';
+            html += '<tr><td style="padding:3px 14px 3px 0;color:#555;">Requests / minute (RPM)</td><td style="font-weight:bold;">' + (lim.rpm || '&mdash;') + '</td></tr>';
+            html += '<tr><td style="padding:3px 14px 3px 0;color:#555;">Requests / day (RPD)</td><td style="font-weight:bold;">' + (lim.rpd ? lim.rpd.toLocaleString() : '&mdash;') + '</td></tr>';
+            html += '</table>';
+            html += '<p style="margin:6px 0 0;color:#555;font-size:12px;">Free tier limits apply across all routed models. <a href="' + (providerData.docs || '#') + '" target="_blank" rel="noopener noreferrer">View docs &rarr;</a></p>';
+            html += '</div>';
+        } else {
+            $row.hide();
+            return;
+        }
+
+        $content.html(html);
+        $row.show();
+    }
+
+    /**
      * Handle provider selection change
      */
     function handleProviderChange() {
@@ -467,16 +556,14 @@
         // Show selected provider setting
         $('.ka_alt_provider_setting[data-provider="' + selectedProvider + '"]').show();
 
-        // Update model dropdown based on provider
-        updateModelDropdown(selectedProvider);
+        // Update rate limits for selected provider
+        renderRateLimits(selectedProvider);
     }
 
     /**
      * Update model dropdown based on provider
      */
     function updateModelDropdown(provider) {
-        // This would need to be implemented with PHP data or AJAX
-        // For now, we'll just log the change
         debugLog('Provider changed to: ' + provider);
     }
 
@@ -609,9 +696,10 @@
             handleProviderChange();
         });
 
-        // Re-render rate limit info when model changes (if key already tested valid)
+        // Re-render rate limits table and key-test card when model changes
         $('#auto_alt_model_name').on('change', function() {
             const provider = $('#auto_alt_provider').val();
+            renderRateLimits(provider);
             if ($('#ka_alt_rate_limit_result_' + provider).is(':visible')) {
                 showRateLimitInfo(provider);
             }

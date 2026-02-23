@@ -635,47 +635,12 @@ class AutoAltTagGenerator {
 								</td>
 							</tr>
 
-							<?php
-							$all_rate_limits             = $this->get_model_rate_limits();
-							$current_model               = get_option( 'auto_alt_model_name', 'gemini-2.5-flash' );
-							$current_limits              = $all_rate_limits[ $current_model ] ?? null;
-							$current_provider_for_limits = get_option( 'auto_alt_provider', 'gemini' );
-							if ( 'gemini' === $current_provider_for_limits ) :
-							?>
-							<tr>
+							<tr id="ka_alt_rate_limits_row" style="display:none;">
 								<th scope="row"><?php esc_html_e( 'Rate Limits', 'auto-alt-tags' ); ?></th>
 								<td>
-									<div style="background:#fff8e1;border:1px solid #ffcc02;border-left:4px solid #ffb900;padding:12px 15px;border-radius:4px;font-size:13px;">
-										<strong><?php esc_html_e( 'Google AI Studio — Free Tier Limits', 'auto-alt-tags' ); ?></strong>
-										<table style="margin-top:8px;border-collapse:collapse;width:100%;max-width:500px;">
-											<thead><tr style="background:rgba(0,0,0,0.05);">
-												<th style="text-align:left;padding:4px 8px;"><?php esc_html_e( 'Model', 'auto-alt-tags' ); ?></th>
-												<th style="text-align:center;padding:4px 8px;">RPM</th>
-												<th style="text-align:center;padding:4px 8px;">RPD</th>
-												<th style="text-align:center;padding:4px 8px;">TPM</th>
-											</tr></thead>
-											<tbody>
-												<?php foreach ( $all_rate_limits as $m_key => $lim ) : ?>
-												<tr <?php echo ( $m_key === $current_model ) ? 'style="font-weight:bold;background:rgba(255,185,0,0.12);"' : ''; ?>>>
-													<td style="padding:4px 8px;"><?php echo esc_html( $this->available_providers['gemini']['models'][ $m_key ] ?? $m_key ); ?></td>
-													<td style="text-align:center;padding:4px 8px;"><?php echo esc_html( $lim['rpm'] ); ?></td>
-													<td style="text-align:center;padding:4px 8px;"><?php echo esc_html( number_format( $lim['rpd'] ) ); ?></td>
-													<td style="text-align:center;padding:4px 8px;"><?php echo esc_html( number_format( $lim['tpm'] ) ); ?></td>
-												</tr>
-												<?php endforeach; ?>
-											</tbody>
-										</table>
-										<p style="margin:8px 0 0;color:#555;">
-											<?php printf(
-												/* translators: %s: link to Google rate limits page */
-												esc_html__( 'Batch size and inter-call delays are automatically capped to stay within these limits. %s', 'auto-alt-tags' ),
-												'<a href="https://ai.google.dev/gemini-api/docs/rate-limits" target="_blank" rel="noopener noreferrer">' . esc_html__( 'View live limits →', 'auto-alt-tags' ) . '</a>'
-											); ?>
-										</p>
-									</div>
+									<div id="ka_alt_rate_limits_content"></div>
 								</td>
 							</tr>
-							<?php endif; ?>
 
 							<tr>
 								<th scope="row">
