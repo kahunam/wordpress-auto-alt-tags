@@ -7,7 +7,8 @@
     max-width: 1200px;
 }
 
-.ka_alt_admin_wrap .card {
+.ka_alt_admin_wrap .card,
+.card {
     max-width: 100%;
     box-sizing: border-box;
 }
