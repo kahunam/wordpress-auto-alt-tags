@@ -345,7 +345,11 @@ class AutoAltTagGenerator {
 					<p><?php printf( esc_html__( 'Please configure your %s API key in the settings below before using the auto-tagging feature.', 'auto-alt-tags' ), esc_html( $provider_name ) ); ?></p>
 				</div>
 			<?php endif; ?>
-			
+
+			<!-- Two-column layout: left = controls, right = settings -->
+			<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
+			<div><!-- left column -->
+
 			<!-- Processing Section -->
 			<div class="card">
 				<h2 class="title"><?php esc_html_e( 'Generate Alt Tags', 'auto-alt-tags' ); ?></h2>
@@ -442,9 +446,11 @@ class AutoAltTagGenerator {
 					</div>
 				</div>
 			</div>
-			
+			</div><!-- end left column -->
+			<div><!-- right column / Settings -->
+
 			<!-- Settings Section -->
-			<div class="card" style="margin-top: 20px;">
+			<div class="card">
 				<h2 class="title"><?php esc_html_e( 'Settings', 'auto-alt-tags' ); ?></h2>
 				<div class="inside">
 					<form method="post" action="options.php">
@@ -634,6 +640,8 @@ class AutoAltTagGenerator {
 					</form>
 				</div>
 			</div>
+			</div><!-- end right column -->
+			</div><!-- end two-column grid -->
 		</div>
 		<?php
 	}
