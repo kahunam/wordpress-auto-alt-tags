@@ -413,7 +413,7 @@ class AutoAltTagGenerator {
 			<?php endif; ?>
 
 			<!-- Top row: Generate Alt Tags (left) | Cost & Security (right) -->
-			<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px; align-items: start; margin-bottom: 20px;">
+			<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; margin-bottom: 20px;">
 			<div><!-- left: Generate Alt Tags -->
 
 			<!-- Processing Section -->
