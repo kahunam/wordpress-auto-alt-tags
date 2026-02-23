@@ -131,7 +131,51 @@ class AutoAltTagGenerator {
 			'gemini-3-pro-preview'   => array( 'rpm' => 5,  'rpd' => 100,  'tpm' => 250000, 'sleep' => 11, 'max_batch' => 2 ),
 		);
 	}
-	
+
+	/**
+	 * Rate limits for all supported providers, used for UI display after key test.
+	 * Sources (Feb 2026):
+	 *   Gemini:     https://ai.google.dev/gemini-api/docs/rate-limits
+	 *   OpenAI:     https://platform.openai.com/docs/guides/rate-limits (Tier 1)
+	 *   Claude:     https://docs.anthropic.com/en/api/rate-limits (Tier 1)
+	 *   OpenRouter: https://openrouter.ai/docs/api/reference/limits (Free Tier)
+	 *
+	 * @return array<string, array>
+	 */
+	private function get_all_provider_rate_limits(): array {
+		return array(
+			'gemini' => array(
+				'tier'   => 'Free Tier',
+				'docs'   => 'https://ai.google.dev/gemini-api/docs/rate-limits',
+				'models' => $this->get_model_rate_limits(),
+			),
+			'openai' => array(
+				'tier'   => 'Tier 1',
+				'docs'   => 'https://platform.openai.com/docs/guides/rate-limits',
+				'models' => array(
+					'gpt-4o'               => array( 'rpm' => 500, 'rpd' => null,  'tpm' => 30000 ),
+					'gpt-4o-mini'          => array( 'rpm' => 500, 'rpd' => 10000, 'tpm' => 200000 ),
+					'gpt-4-turbo'          => array( 'rpm' => 500, 'rpd' => null,  'tpm' => 30000 ),
+					'gpt-4-vision-preview' => array( 'rpm' => 100, 'rpd' => null,  'tpm' => 10000 ),
+				),
+			),
+			'claude' => array(
+				'tier'   => 'Tier 1',
+				'docs'   => 'https://docs.anthropic.com/en/api/rate-limits',
+				'models' => array(
+					'claude-3-5-sonnet-20241022' => array( 'rpm' => 50, 'itpm' => 30000, 'otpm' => 8000 ),
+					'claude-3-5-haiku-20241022'  => array( 'rpm' => 50, 'itpm' => 50000, 'otpm' => 10000 ),
+					'claude-3-opus-20240229'     => array( 'rpm' => 50, 'itpm' => 10000, 'otpm' => 2000 ),
+				),
+			),
+			'openrouter' => array(
+				'tier'   => 'Free Tier',
+				'docs'   => 'https://openrouter.ai/docs/api/reference/limits',
+				'all'    => array( 'rpm' => 20, 'rpd' => 50 ),
+			),
+		);
+	}
+
 	/**
 	 * Get API key for current provider
 	 *
@@ -237,10 +281,11 @@ class AutoAltTagGenerator {
 		);
 
 		wp_localize_script( 'ka-alt-tags-admin', 'autoAltAjax', array(
-			'ajaxurl'     => admin_url( 'admin-ajax.php' ),
-			'nonce'       => wp_create_nonce( 'auto_alt_nonce' ),
-			'rateLimits'  => $this->get_model_rate_limits(),
-			'modelNames'  => $this->available_providers['gemini']['models'],
+			'ajaxurl'        => admin_url( 'admin-ajax.php' ),
+			'nonce'          => wp_create_nonce( 'auto_alt_nonce' ),
+			'rateLimits'     => $this->get_model_rate_limits(),
+			'modelNames'     => $this->available_providers['gemini']['models'],
+			'providerLimits' => $this->get_all_provider_rate_limits(),
 		) );
 	}
 	

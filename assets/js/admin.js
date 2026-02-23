@@ -321,51 +321,75 @@
     }
 
     /**
-     * Show rate limit info for the current Gemini model after a successful key test
+     * Build a rate-limit table row
+     */
+    function rateLimitRow(label, value) {
+        return '<tr>' +
+            '<td style="padding:2px 14px 2px 0;color:#555;">' + label + '</td>' +
+            '<td style="font-weight:bold;">' + value + '</td>' +
+        '</tr>';
+    }
+
+    /**
+     * Show rate limit info for the selected model/provider after a successful key test
      */
     function showRateLimitInfo(provider) {
         const $container = $('#ka_alt_rate_limit_result_' + provider);
-        if (!$container.length) return;
+        if (!$container.length || !autoAltAjax.providerLimits) return;
 
-        if (provider !== 'gemini' || !autoAltAjax.rateLimits) {
-            $container.hide();
-            return;
+        const providerData = autoAltAjax.providerLimits[provider];
+        if (!providerData) { $container.hide(); return; }
+
+        const selectedModel = $('#auto_alt_model_name').val();
+        let rows = '';
+        let subtitle = '';
+        let note = '';
+
+        if (provider === 'gemini') {
+            const limits = (providerData.models || {})[selectedModel];
+            if (!limits) { $container.hide(); return; }
+            const name = (autoAltAjax.modelNames || {})[selectedModel] || selectedModel;
+            subtitle = 'Rate limits for <em>' + name + '</em> (' + providerData.tier + ')';
+            rows += rateLimitRow('Requests / minute (RPM)', limits.rpm);
+            rows += rateLimitRow('Requests / day (RPD)',    limits.rpd ? limits.rpd.toLocaleString() : '—');
+            rows += rateLimitRow('Tokens / minute (TPM)',   limits.tpm ? limits.tpm.toLocaleString() : '—');
+            rows += rateLimitRow('Safe batch size',         limits.max_batch + ' images');
+            note = 'Batch processing will pause ' + limits.sleep + 's between each API call to stay within the RPM limit.';
+
+        } else if (provider === 'openai') {
+            const limits = (providerData.models || {})[selectedModel];
+            if (!limits) { $container.hide(); return; }
+            subtitle = 'Rate limits for <em>' + selectedModel + '</em> (' + providerData.tier + ')';
+            rows += rateLimitRow('Requests / minute (RPM)', limits.rpm);
+            rows += rateLimitRow('Requests / day (RPD)',    limits.rpd ? limits.rpd.toLocaleString() : '—');
+            rows += rateLimitRow('Tokens / minute (TPM)',   limits.tpm ? limits.tpm.toLocaleString() : '—');
+            note = 'Upgrade to higher tiers for increased limits.';
+
+        } else if (provider === 'claude') {
+            const limits = (providerData.models || {})[selectedModel];
+            if (!limits) { $container.hide(); return; }
+            subtitle = 'Rate limits for <em>' + selectedModel + '</em> (' + providerData.tier + ')';
+            rows += rateLimitRow('Requests / minute (RPM)',       limits.rpm);
+            rows += rateLimitRow('Input tokens / minute (ITPM)',  limits.itpm ? limits.itpm.toLocaleString() : '—');
+            rows += rateLimitRow('Output tokens / minute (OTPM)', limits.otpm ? limits.otpm.toLocaleString() : '—');
+            note = 'Limits apply per model class. Upgrade spend to raise limits.';
+
+        } else if (provider === 'openrouter') {
+            const limits = providerData.all || {};
+            subtitle = 'Rate limits (' + providerData.tier + ')';
+            rows += rateLimitRow('Requests / minute (RPM)', limits.rpm || '—');
+            rows += rateLimitRow('Requests / day (RPD)',    limits.rpd ? limits.rpd.toLocaleString() : '—');
+            note = 'Free tier limits apply across all models routed through OpenRouter.';
         }
 
-        const selectedModel = $('#auto_alt_model_name').val() || 'gemini-2.5-flash';
-        const limits = autoAltAjax.rateLimits[selectedModel];
-        const modelName = (autoAltAjax.modelNames && autoAltAjax.modelNames[selectedModel])
-            ? autoAltAjax.modelNames[selectedModel]
-            : selectedModel;
-
-        if (!limits) {
-            $container.hide();
-            return;
-        }
-
+        const docsUrl = providerData.docs || '#';
         const html =
-            '<div style="background:#f0fdf4;border:1px solid #86efac;border-left:4px solid #22c55e;padding:10px 14px;border-radius:4px;font-size:13px;margin-top:8px;">' +
-                '<strong style="display:block;margin-bottom:6px;">✓ API key valid &mdash; Free-tier rate limits for <em>' + modelName + '</em>:</strong>' +
-                '<table style="border-collapse:collapse;">' +
-                    '<tr>' +
-                        '<td style="padding:2px 12px 2px 0;color:#555;">Requests / minute (RPM)</td>' +
-                        '<td style="font-weight:bold;">' + limits.rpm + '</td>' +
-                    '</tr>' +
-                    '<tr>' +
-                        '<td style="padding:2px 12px 2px 0;color:#555;">Requests / day (RPD)</td>' +
-                        '<td style="font-weight:bold;">' + limits.rpd.toLocaleString() + '</td>' +
-                    '</tr>' +
-                    '<tr>' +
-                        '<td style="padding:2px 12px 2px 0;color:#555;">Tokens / minute (TPM)</td>' +
-                        '<td style="font-weight:bold;">' + limits.tpm.toLocaleString() + '</td>' +
-                    '</tr>' +
-                    '<tr>' +
-                        '<td style="padding:2px 12px 2px 0;color:#555;">Safe batch size</td>' +
-                        '<td style="font-weight:bold;">' + limits.max_batch + ' images</td>' +
-                    '</tr>' +
-                '</table>' +
-                '<p style="margin:6px 0 0;color:#555;font-size:12px;">' +
-                    'Batch processing will pause ' + limits.sleep + 's between each API call to stay within the RPM limit.' +
+            '<div style="background:#f0fdf4;border:1px solid #86efac;border-left:4px solid #22c55e;padding:10px 14px;border-radius:4px;font-size:13px;">' +
+                '<strong style="display:block;margin-bottom:6px;">✓ API key valid &mdash; ' + subtitle + '</strong>' +
+                '<table style="border-collapse:collapse;">' + rows + '</table>' +
+                (note ? '<p style="margin:6px 0 0;color:#555;font-size:12px;">' + note + '</p>' : '') +
+                '<p style="margin:4px 0 0;font-size:12px;">' +
+                    '<a href="' + docsUrl + '" target="_blank" rel="noopener noreferrer">View full rate limit docs →</a>' +
                 '</p>' +
             '</div>';
 
