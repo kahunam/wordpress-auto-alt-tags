@@ -1071,7 +1071,19 @@ class AutoAltTagGenerator {
 		
 		foreach ( $batch as $attachment_id ) {
 			$this->debug_log( sprintf( 'Processing image ID: %d', $attachment_id ) );
-			$result = $this->generate_alt_tag( (int) $attachment_id );
+
+			// Retry on failure up to 2 additional attempts
+			$max_retries = 2;
+			$attempt = 0;
+			$result = null;
+			do {
+				if ( $attempt > 0 ) {
+					sleep( 1 );
+					$this->debug_log( sprintf( 'Retrying image ID: %d (attempt %d)', $attachment_id, $attempt + 1 ) );
+				}
+				$result = $this->generate_alt_tag( (int) $attachment_id );
+				$attempt++;
+			} while ( ! $result['success'] && $attempt <= $max_retries );
 			$batch_processed++;
 			if ( $result['success'] ) {
 				$batch_success++;
@@ -1716,14 +1728,24 @@ class AutoAltTagGenerator {
 		
 		foreach ( $test_images as $attachment_id ) {
 			$this->debug_log( sprintf( 'Testing image ID: %d', $attachment_id ) );
-			
+
 			// Get image info
 			$image_title = get_the_title( $attachment_id );
 			$image_url = wp_get_attachment_url( $attachment_id );
 			$thumbnail_url = wp_get_attachment_image_url( $attachment_id, 'thumbnail' );
-			
-			// Generate alt text
-			$result = $this->generate_alt_tag_preview( (int) $attachment_id );
+
+			// Generate alt text with retry on failure
+			$max_retries = 2;
+			$attempt = 0;
+			$result = null;
+			do {
+				if ( $attempt > 0 ) {
+					sleep( 1 );
+					$this->debug_log( sprintf( 'Retrying image ID: %d (attempt %d)', $attachment_id, $attempt + 1 ) );
+				}
+				$result = $this->generate_alt_tag_preview( (int) $attachment_id );
+				$attempt++;
+			} while ( ! $result['success'] && $attempt <= $max_retries );
 			
 			$image_result = array(
 				'id' => $attachment_id,
