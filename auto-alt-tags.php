@@ -113,6 +113,24 @@ class AutoAltTagGenerator {
 		$provider = get_option( 'auto_alt_provider', 'gemini' );
 		return $this->available_providers[ $provider ]['models'] ?? $this->available_providers['gemini']['models'];
 	}
+
+	/**
+	 * Get free-tier rate limits for Gemini models.
+	 * Source: https://ai.google.dev/gemini-api/docs/rate-limits (Feb 2026)
+	 *
+	 * Keys: rpm (requests/min), rpd (requests/day), tpm (tokens/min),
+	 *       sleep (seconds between calls), max_batch (safe batch ceiling).
+	 *
+	 * @return array<string, array<string, int>>
+	 */
+	private function get_model_rate_limits(): array {
+		return array(
+			'gemini-2.5-flash'       => array( 'rpm' => 10, 'rpd' => 250,  'tpm' => 250000, 'sleep' => 5,  'max_batch' => 5 ),
+			'gemini-2.5-flash-lite'  => array( 'rpm' => 15, 'rpd' => 1000, 'tpm' => 250000, 'sleep' => 3,  'max_batch' => 7 ),
+			'gemini-3-flash-preview' => array( 'rpm' => 10, 'rpd' => 250,  'tpm' => 250000, 'sleep' => 5,  'max_batch' => 5 ),
+			'gemini-3-pro-preview'   => array( 'rpm' => 5,  'rpd' => 100,  'tpm' => 250000, 'sleep' => 11, 'max_batch' => 2 ),
+		);
+	}
 	
 	/**
 	 * Get API key for current provider
@@ -559,21 +577,79 @@ class AutoAltTagGenerator {
 									</p>
 								</td>
 							</tr>
-							
+
+							<?php
+							$all_rate_limits             = $this->get_model_rate_limits();
+							$current_model               = get_option( 'auto_alt_model_name', 'gemini-2.5-flash' );
+							$current_limits              = $all_rate_limits[ $current_model ] ?? null;
+							$current_provider_for_limits = get_option( 'auto_alt_provider', 'gemini' );
+							if ( 'gemini' === $current_provider_for_limits ) :
+							?>
+							<tr>
+								<th scope="row"><?php esc_html_e( 'Rate Limits', 'auto-alt-tags' ); ?></th>
+								<td>
+									<div style="background:#fff8e1;border:1px solid #ffcc02;border-left:4px solid #ffb900;padding:12px 15px;border-radius:4px;font-size:13px;">
+										<strong><?php esc_html_e( 'Google AI Studio â Free Tier Limits', 'auto-alt-tags' ); ?></strong>
+										<table style="margin-top:8px;border-collapse:collapse;width:100%;max-width:500px;">
+											<thead><tr style="background:rgba(0,0,0,0.05);">
+												<th style="text-align:left;padding:4px 8px;"><?php esc_html_e( 'Model', 'auto-alt-tags' ); ?></th>
+												<th style="text-align:center;padding:4px 8px;">RPM</th>
+												<th style="text-align:center;padding:4px 8px;">RPD</th>
+												<th style="text-align:center;padding:4px 8px;">TPM</th>
+											</tr></thead>
+											<tbody>
+												<?php foreach ( $all_rate_limits as $m_key => $lim ) : ?>
+												<tr <?php echo ( $m_key === $current_model ) ? 'style="font-weight:bold;background:rgba(255,185,0,0.12);"' : ''; ?>>>
+													<td style="padding:4px 8px;"><?php echo esc_html( $this->available_providers['gemini']['models'][ $m_key ] ?? $m_key ); ?></td>
+													<td style="text-align:center;padding:4px 8px;"><?php echo esc_html( $lim['rpm'] ); ?></td>
+													<td style="text-align:center;padding:4px 8px;"><?php echo esc_html( number_format( $lim['rpd'] ) ); ?></td>
+													<td style="text-align:center;padding:4px 8px;"><?php echo esc_html( number_format( $lim['tpm'] ) ); ?></td>
+												</tr>
+												<?php endforeach; ?>
+											</tbody>
+										</table>
+										<p style="margin:8px 0 0;color:#555;">
+											<?php printf(
+												/* translators: %s: link to Google rate limits page */
+												esc_html__( 'Batch size and inter-call delays are automatically capped to stay within these limits. %s', 'auto-alt-tags' ),
+												'<a href="https://ai.google.dev/gemini-api/docs/rate-limits" target="_blank" rel="noopener noreferrer">' . esc_html__( 'View live limits â', 'auto-alt-tags' ) . '</a>'
+											); ?>
+										</p>
+									</div>
+								</td>
+							</tr>
+							<?php endif; ?>
+
 							<tr>
 								<th scope="row">
 									<label for="auto_alt_batch_size"><?php esc_html_e( 'Batch Size', 'auto-alt-tags' ); ?></label>
 								</th>
 								<td>
-									<input type="number" 
-										   id="auto_alt_batch_size" 
-										   name="auto_alt_batch_size" 
-										   value="<?php echo esc_attr( get_option( 'auto_alt_batch_size', 10 ) ); ?>" 
-										   min="1" 
-										   max="50" 
-										   class="small-text" />
+									<?php
+									$max_batch   = ( 'gemini' === $current_provider_for_limits && $current_limits ) ? $current_limits['max_batch'] : 50;
+									$saved_batch = (int) get_option( 'auto_alt_batch_size', 5 );
+									$safe_batch  = min( $saved_batch, $max_batch );
+									?>
+									<input type="number"
+									   id="auto_alt_batch_size"
+									   name="auto_alt_batch_size"
+									   value="<?php echo esc_attr( $safe_batch ); ?>"
+									   min="1"
+									   max="<?php echo esc_attr( $max_batch ); ?>"
+									   class="small-text" />
 									<p class="description">
-										<?php esc_html_e( 'Number of images to process in each batch (1-50)', 'auto-alt-tags' ); ?>
+										<?php
+										if ( 'gemini' === $current_provider_for_limits && $current_limits ) {
+											printf(
+												/* translators: %1$d: max batch, %2$d: RPM */
+												esc_html__( 'Max %1$d images per batch for this model (%2$d RPM free-tier limit). A delay is applied between each API call to respect the rate limit.', 'auto-alt-tags' ),
+												$max_batch,
+												$current_limits['rpm']
+											);
+										} else {
+											esc_html_e( 'Number of images to process in each batch (1-50)', 'auto-alt-tags' );
+										}
+										?>
 									</p>
 								</td>
 							</tr>
@@ -1039,9 +1115,15 @@ class AutoAltTagGenerator {
 		$current_offset = get_transient( 'auto_alt_offset' ) ?: 0;
 		$current_offset = max( 0, min( $current_offset, $total_images ) ); // Ensure offset is valid
 		
-		// Get and validate batch size
-		$batch_size = get_option( 'auto_alt_batch_size', $this->batch_size );
-		$batch_size = max( 1, min( 50, (int) $batch_size ) ); // Enforce limits
+		// Get and validate batch size — cap to model rate limit for Gemini
+		$batch_size = (int) get_option( 'auto_alt_batch_size', $this->batch_size );
+		$model_limits = array();
+		if ( 'gemini' === $current_provider ) {
+			$model_name   = get_option( 'auto_alt_model_name', 'gemini-2.5-flash' );
+			$model_limits = $this->get_model_rate_limits()[ $model_name ] ?? array();
+		}
+		$hard_max   = ! empty( $model_limits ) ? $model_limits['max_batch'] : 50;
+		$batch_size = max( 1, min( $hard_max, $batch_size ) );
 		
 		// Get cumulative success count
 		$cumulative_success = get_transient( 'auto_alt_success_count' ) ?: 0;
@@ -1068,8 +1150,9 @@ class AutoAltTagGenerator {
 		$batch_processed = 0;
 		$batch_success = 0;
 		$errors = array();
-		
-		foreach ( $batch as $attachment_id ) {
+		$inter_call_sleep = ! empty( $model_limits ) ? $model_limits['sleep'] : 0;
+
+		foreach ( $batch as $idx => $attachment_id ) {
 			$this->debug_log( sprintf( 'Processing image ID: %d', $attachment_id ) );
 
 			// Retry on failure up to 2 additional attempts
@@ -1084,6 +1167,13 @@ class AutoAltTagGenerator {
 				$result = $this->generate_alt_tag( (int) $attachment_id );
 				$attempt++;
 			} while ( ! $result['success'] && $attempt <= $max_retries );
+
+			// Rate-limit sleep between calls (skip after last image in batch)
+			if ( $inter_call_sleep > 0 && $idx < count( $batch ) - 1 ) {
+				$this->debug_log( sprintf( 'Rate limit pause: %ds between calls', $inter_call_sleep ) );
+				sleep( $inter_call_sleep );
+			}
+
 			$batch_processed++;
 			if ( $result['success'] ) {
 				$batch_success++;
@@ -1725,8 +1815,16 @@ class AutoAltTagGenerator {
 		$results = array();
 		$successful = 0;
 		$errors = array();
-		
-		foreach ( $test_images as $attachment_id ) {
+
+		// Determine inter-call sleep based on model rate limits
+		$test_model_limits    = array();
+		if ( 'gemini' === $current_provider ) {
+			$test_model_name   = get_option( 'auto_alt_model_name', 'gemini-2.5-flash' );
+			$test_model_limits = $this->get_model_rate_limits()[ $test_model_name ] ?? array();
+		}
+		$test_inter_call_sleep = ! empty( $test_model_limits ) ? $test_model_limits['sleep'] : 0;
+
+		foreach ( $test_images as $test_idx => $attachment_id ) {
 			$this->debug_log( sprintf( 'Testing image ID: %d', $attachment_id ) );
 
 			// Get image info
@@ -1746,6 +1844,12 @@ class AutoAltTagGenerator {
 				$result = $this->generate_alt_tag_preview( (int) $attachment_id );
 				$attempt++;
 			} while ( ! $result['success'] && $attempt <= $max_retries );
+
+			// Rate-limit sleep between calls (skip after last image)
+			if ( $test_inter_call_sleep > 0 && $test_idx < count( $test_images ) - 1 ) {
+				$this->debug_log( sprintf( 'Rate limit pause: %ds between calls', $test_inter_call_sleep ) );
+				sleep( $test_inter_call_sleep );
+			}
 			
 			$image_result = array(
 				'id' => $attachment_id,
