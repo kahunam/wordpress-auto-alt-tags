@@ -294,6 +294,7 @@
 .form-table input[type="number"],
 .form-table textarea,
 .form-table select {
+    width: 100%;
     max-width: 100%;
     box-sizing: border-box;
     word-wrap: break-word;
@@ -302,7 +303,6 @@
 
 .form-table textarea {
     width: 100%;
-    max-width: 600px;
     resize: vertical;
     word-wrap: break-word;
     overflow-wrap: break-word;
@@ -310,18 +310,16 @@
 }
 
 .form-table .regular-text {
-    max-width: 400px;
     width: 100%;
 }
 
 .form-table .large-text {
-    max-width: 600px;
     width: 100%;
 }
 
 .form-table .small-text {
     max-width: 100px;
-    width: 100%;
+    width: auto;
 }
 
 .form-table .description {
