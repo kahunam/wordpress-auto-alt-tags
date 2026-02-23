@@ -231,6 +231,7 @@ class AutoAltTagGenerator {
 		add_action( 'wp_ajax_test_api_connection', array( $this, 'ajax_test_api_connection' ) );
 		add_action( 'wp_ajax_test_provider_key', array( $this, 'ajax_test_provider_key' ) );
 		add_action( 'wp_ajax_test_first_five', array( $this, 'ajax_test_first_five' ) );
+		add_action( 'wp_ajax_check_alt_session', array( $this, 'ajax_check_session' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'plugins_loaded', array( $this, 'load_textdomain' ) );
@@ -444,10 +445,16 @@ class AutoAltTagGenerator {
 							<?php esc_html_e( 'Refresh Statistics', 'auto-alt-tags' ); ?>
 						</button>
 
+						<button id="ka_alt_resume_processing" class="button button-secondary" style="display:none;" <?php echo ! $current_api_key ? 'disabled' : ''; ?>>
+							<?php esc_html_e( 'Resume Processing', 'auto-alt-tags' ); ?>
+						</button>
+
 						<button id="ka_alt_stop_processing" class="button button-secondary" style="display: none;">
 							<?php esc_html_e( 'Stop Processing', 'auto-alt-tags' ); ?>
 						</button>
 					</div>
+
+					<div id="ka_alt_missing_only_notice" style="display:none;margin-top:12px;padding:10px 14px;background:#f0f6fc;border:1px solid #0969da;border-left:4px solid #0969da;border-radius:4px;font-size:13px;"></div>
 
 					<!-- Debug Log Area -->
 					<div id="ka_alt_debug_log" style="display: <?php echo $this->debug_mode ? 'block' : 'none'; ?>; margin-top: 20px;">
@@ -1144,25 +1151,37 @@ class AutoAltTagGenerator {
 		set_transient( $rate_limit_key, $attempts + 1, HOUR_IN_SECONDS );
 		
 		$this->debug_log( 'Starting alt tag processing...' );
-		
-		// Get images without alt text
+
+		// Always query fresh — only images that still need alt text are returned.
+		// This means failed images from a previous batch are naturally retried.
 		$images_without_alt = $this->get_images_without_alt();
-		$total_images = count( $images_without_alt );
-		
-		$this->debug_log( sprintf( 'Found %d images without alt text', $total_images ) );
-		
-		if ( 0 === $total_images ) {
+		$total_remaining    = count( $images_without_alt );
+
+		$this->debug_log( sprintf( 'Found %d images without alt text', $total_remaining ) );
+
+		// On first call of a session, store the initial total for accurate progress.
+		$session_total = (int) ( get_transient( 'auto_alt_session_total' ) ?: 0 );
+		if ( ! $session_total ) {
+			$session_total = $total_remaining;
+			set_transient( 'auto_alt_session_total', $session_total, 2 * HOUR_IN_SECONDS );
+		}
+
+		if ( 0 === $total_remaining ) {
+			$cumulative_success = get_transient( 'auto_alt_success_count' ) ?: 0;
+			delete_transient( 'auto_alt_session_total' );
+			delete_transient( 'auto_alt_success_count' );
+			$this->debug_log( 'Processing complete!' );
 			wp_send_json_success( array(
 				'completed' => true,
-				'message'   => __( 'No images need alt tags', 'auto-alt-tags' ),
+				'message'   => sprintf(
+					/* translators: %d: Total success count */
+					__( 'All images processed. %d alt tags generated successfully.', 'auto-alt-tags' ),
+					(int) $cumulative_success
+				),
 				'progress'  => 100,
 			) );
 		}
-		
-		// Get current batch offset and validate
-		$current_offset = get_transient( 'auto_alt_offset' ) ?: 0;
-		$current_offset = max( 0, min( $current_offset, $total_images ) ); // Ensure offset is valid
-		
+
 		// Get and validate batch size — cap to model rate limit for Gemini
 		$batch_size = (int) get_option( 'auto_alt_batch_size', $this->batch_size );
 		$model_limits = array();
@@ -1172,27 +1191,13 @@ class AutoAltTagGenerator {
 		}
 		$hard_max   = ! empty( $model_limits ) ? $model_limits['max_batch'] : 50;
 		$batch_size = max( 1, min( $hard_max, $batch_size ) );
-		
+
 		// Get cumulative success count
 		$cumulative_success = get_transient( 'auto_alt_success_count' ) ?: 0;
-		
-		$batch = array_slice( $images_without_alt, $current_offset, $batch_size );
-		
-		if ( empty( $batch ) ) {
-			// Processing complete
-			delete_transient( 'auto_alt_offset' );
-			delete_transient( 'auto_alt_success_count' );
-			$this->debug_log( 'Processing complete!' );
-			wp_send_json_success( array(
-				'completed' => true,
-				'message'   => sprintf(
-					/* translators: %d: Total success count */
-					__( 'All images processed. %d alt tags generated successfully.', 'auto-alt-tags' ),
-					$cumulative_success
-				),
-				'progress'  => 100,
-			) );
-		}
+
+		// Always start from index 0 — successful images drop off the list between calls,
+		// so failed images are never skipped.
+		$batch = array_slice( $images_without_alt, 0, $batch_size );
 		
 		// Process current batch
 		$batch_processed = 0;
@@ -1241,24 +1246,20 @@ class AutoAltTagGenerator {
 		// Update cumulative success count
 		$cumulative_success += $batch_success;
 		set_transient( 'auto_alt_success_count', $cumulative_success, HOUR_IN_SECONDS );
-		
-		// Update offset - only advance by the number of items actually processed
-		$new_offset = $current_offset + count( $batch );
-		set_transient( 'auto_alt_offset', $new_offset, HOUR_IN_SECONDS );
-		
-		// Calculate actual processed count
-		$total_processed = min( $new_offset, $total_images );
-		
-		// Calculate progress
-		$progress = $total_images > 0 ? min( 100, ( $total_processed / $total_images ) * 100 ) : 100;
-		
+
+		// Progress: images processed this session = session_total minus what's still remaining.
+		// Estimate remaining after this batch (successful ones will disappear from next query).
+		$estimated_remaining = $total_remaining - $batch_success;
+		$processed_so_far    = $session_total - $estimated_remaining;
+		$progress = $session_total > 0 ? min( 100, ( $processed_so_far / $session_total ) * 100 ) : 100;
+
 		wp_send_json_success( array(
-			'completed' => $new_offset >= $total_images,
+			'completed' => ( 0 === $estimated_remaining ),
 			'message'   => sprintf(
 				/* translators: %1$d: Processed count, %2$d: Total count, %3$d: Success count */
 				__( 'Processed %1$d/%2$d images. %3$d successful.', 'auto-alt-tags' ),
-				$total_processed,
-				$total_images,
+				max( 0, $processed_so_far ),
+				$session_total,
 				$cumulative_success
 			),
 			'progress'  => round( $progress, 1 ),
@@ -1268,6 +1269,38 @@ class AutoAltTagGenerator {
 		) );
 	}
 	
+	/**
+	 * AJAX handler for checking whether an incomplete processing session exists.
+	 * Used to show/hide the Resume button on page load.
+	 */
+	public function ajax_check_session(): void {
+		if ( ! check_ajax_referer( 'auto_alt_nonce', 'nonce', false ) ) {
+			wp_send_json_error( __( 'Security check failed', 'auto-alt-tags' ) );
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Unauthorized access', 'auto-alt-tags' ) );
+		}
+
+		$session_total = (int) ( get_transient( 'auto_alt_session_total' ) ?: 0 );
+		$remaining     = count( $this->get_images_without_alt() );
+
+		if ( $session_total > 0 && $remaining > 0 ) {
+			wp_send_json_success( array(
+				'has_session'   => true,
+				'session_total' => $session_total,
+				'remaining'     => $remaining,
+				'processed'     => $session_total - $remaining,
+			) );
+		} else {
+			// Clean up stale transients if everything is already done.
+			if ( 0 === $remaining ) {
+				delete_transient( 'auto_alt_session_total' );
+				delete_transient( 'auto_alt_success_count' );
+			}
+			wp_send_json_success( array( 'has_session' => false ) );
+		}
+	}
+
 	/**
 	 * AJAX handler for getting image statistics
 	 */

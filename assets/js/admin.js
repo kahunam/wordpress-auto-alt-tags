@@ -148,6 +148,8 @@
         $('#ka_alt_control_buttons').show();
         $('#ka_alt_stop_processing').hide();
         $('#ka_alt_start_processing').show();
+        $('#ka_alt_resume_processing').hide();
+        $('#ka_alt_missing_only_notice').hide();
     }
 
     /**
@@ -478,44 +480,82 @@
         debugLog('Provider changed to: ' + provider);
     }
 
+    /**
+     * Start or resume batch processing
+     */
+    function startProcessing(skipConfirm) {
+        if (isProcessing) return;
+
+        if (!skipConfirm && !confirm('This will generate alt tags for all images without them. Continue?')) {
+            return;
+        }
+
+        isProcessing = true;
+        shouldStop = false;
+        processedImages = 0;
+
+        debugLog('Starting alt tag processing (missing only)...');
+
+        $('#ka_alt_control_buttons').hide();
+        $('#ka_alt_missing_only_notice').hide();
+        $('#ka_alt_progress').show();
+        $('#ka_alt_stop_processing').show();
+        updateProgress(0, 'Starting...');
+
+        // Clear debug log
+        $('#ka_alt_log_content').empty();
+
+        // Get initial stats then start processing
+        getInitialStats(function() {
+            if (totalImages === 0) {
+                alert('No images need alt tags!');
+                resetUI();
+            } else {
+                updateProgress(0, 'Processing ' + totalImages + ' images without alt text...');
+                processAltTags();
+            }
+        });
+    }
+
+    /**
+     * Check for an incomplete session from a previous run and show Resume button
+     */
+    function checkForSession() {
+        $.ajax({
+            url: autoAltAjax.ajaxurl,
+            type: 'POST',
+            data: { action: 'check_alt_session', nonce: autoAltAjax.nonce },
+            success: function(response) {
+                if (response.success && response.data.has_session) {
+                    const d = response.data;
+                    $('#ka_alt_resume_processing')
+                        .text('Resume Processing (' + d.remaining + ' of ' + d.session_total + ' remaining)')
+                        .show();
+                    $('#ka_alt_missing_only_notice')
+                        .html('<strong>Previous session detected.</strong> ' + d.processed + ' images were already tagged. ' +
+                              'Click <em>Resume Processing</em> to continue, or <em>Start Auto-Tagging All Images</em> to restart.')
+                        .show();
+                }
+            }
+        });
+    }
+
     // Document ready
     $(document).ready(function() {
+
+        // Check for resumable session on page load
+        checkForSession();
 
         // Start processing button
         $('#ka_alt_start_processing').on('click', function(e) {
             e.preventDefault();
+            startProcessing(false);
+        });
 
-            if (isProcessing) return;
-
-            if (!confirm('This will generate alt tags for all images without them. Continue?')) {
-                return;
-            }
-
-            isProcessing = true;
-            shouldStop = false;
-            processedImages = 0;
-
-            debugLog('Starting alt tag processing...');
-
-            $('#ka_alt_control_buttons').hide();
-            $('#ka_alt_progress').show();
-            $('#ka_alt_stop_processing').show();
-            $('#ka_alt_start_processing').hide();
-            updateProgress(0, 'Starting...');
-
-            // Clear debug log
-            $('#ka_alt_log_content').empty();
-
-            // Get initial stats then start processing
-            getInitialStats(function() {
-                if (totalImages === 0) {
-                    alert('No images need alt tags!');
-                    resetUI();
-                } else {
-                    updateProgress(0, 'Processing ' + totalImages + ' images...');
-                    processAltTags();
-                }
-            });
+        // Resume processing button (no confirm dialog)
+        $('#ka_alt_resume_processing').on('click', function(e) {
+            e.preventDefault();
+            startProcessing(true);
         });
 
         // Stop processing button
@@ -546,7 +586,7 @@
         // Proceed with all images button
         $('#ka_alt_proceed_with_all').on('click', function() {
             $('#ka_alt_test_results_modal').hide();
-            $('#ka_alt_start_processing').click();
+            startProcessing(true);
         });
 
         // Refresh stats button
