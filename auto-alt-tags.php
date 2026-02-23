@@ -412,9 +412,9 @@ class AutoAltTagGenerator {
 				</div>
 			<?php endif; ?>
 
-			<!-- Two-column layout: left = controls, right = settings -->
-			<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
-			<div><!-- left column -->
+			<!-- Top row: Generate Alt Tags (left) | Cost & Security (right) -->
+			<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px; align-items: start; margin-bottom: 20px;">
+			<div><!-- left: Generate Alt Tags -->
 
 			<!-- Processing Section -->
 			<div class="card">
@@ -465,30 +465,11 @@ class AutoAltTagGenerator {
 					</div>
 				</div>
 			</div>
+			</div><!-- end left: Generate Alt Tags -->
 
-			<!-- Test Results Modal -->
-			<div id="ka_alt_test_results_modal" style="display: none; position: fixed; z-index: 100000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
-				<div style="background-color: #fefefe; margin: 2% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 1000px; border-radius: 5px; max-height: 90%; overflow-y: auto;">
-					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-						<h2><?php esc_html_e( 'Test Results - First 5 Images', 'auto-alt-tags' ); ?></h2>
-						<span id="ka_alt_close_modal" style="font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
-					</div>
-					<div id="ka_alt_test_results_content">
-						<!-- Results will be populated here -->
-					</div>
-					<div style="margin-top: 20px; text-align: center;">
-						<button id="ka_alt_proceed_with_all" class="button button-primary" style="display: none;">
-							<?php esc_html_e( 'Proceed with All Images', 'auto-alt-tags' ); ?>
-						</button>
-						<button id="ka_alt_close_modal_btn" class="button button-secondary">
-							<?php esc_html_e( 'Close', 'auto-alt-tags' ); ?>
-						</button>
-					</div>
-				</div>
-			</div>
-			
+			<div><!-- right: Cost & Security -->
 			<!-- Cost and Security Information -->
-			<div class="card" style="margin-top: 20px; border-left: 4px solid #ffb900;">
+			<div class="card" style="border-left: 4px solid #ffb900;">
 				<h2 class="title"><?php esc_html_e( 'Important: Cost & Security Information', 'auto-alt-tags' ); ?></h2>
 				<div class="inside">
 					<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
@@ -518,10 +499,31 @@ class AutoAltTagGenerator {
 					</div>
 				</div>
 			</div>
-			</div><!-- end left column -->
-			<div><!-- right column / Settings -->
+			</div><!-- end right: Cost & Security -->
+			</div><!-- end top grid -->
 
-			<!-- Settings Section -->
+			<!-- Test Results Modal -->
+			<div id="ka_alt_test_results_modal" style="display: none; position: fixed; z-index: 100000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+				<div style="background-color: #fefefe; margin: 2% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 1000px; border-radius: 5px; max-height: 90%; overflow-y: auto;">
+					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+						<h2><?php esc_html_e( 'Test Results - First 5 Images', 'auto-alt-tags' ); ?></h2>
+						<span id="ka_alt_close_modal" style="font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+					</div>
+					<div id="ka_alt_test_results_content">
+						<!-- Results will be populated here -->
+					</div>
+					<div style="margin-top: 20px; text-align: center;">
+						<button id="ka_alt_proceed_with_all" class="button button-primary" style="display: none;">
+							<?php esc_html_e( 'Proceed with All Images', 'auto-alt-tags' ); ?>
+						</button>
+						<button id="ka_alt_close_modal_btn" class="button button-secondary">
+							<?php esc_html_e( 'Close', 'auto-alt-tags' ); ?>
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- Settings Section (full width below) -->
 			<div class="card">
 				<h2 class="title"><?php esc_html_e( 'Settings', 'auto-alt-tags' ); ?></h2>
 				<div class="inside">
@@ -771,8 +773,7 @@ class AutoAltTagGenerator {
 					</form>
 				</div>
 			</div>
-			</div><!-- end right column -->
-			</div><!-- end two-column grid -->
+			</div><!-- end Settings card -->
 		</div>
 		<?php
 	}

@@ -7,6 +7,11 @@
     max-width: 1200px;
 }
 
+.ka_alt_admin_wrap .card {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
 .ka_alt_admin_wrap h1 {
     margin-bottom: 20px;
     display: flex;
