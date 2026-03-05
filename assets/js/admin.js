@@ -731,6 +731,50 @@
             window.location.href = url;
         });
 
+        // Import CSV form
+        $('#ka_alt_import_form').on('submit', function(e) {
+            e.preventDefault();
+
+            var file = $('#ka_alt_csv_file')[0].files[0];
+            if (!file) {
+                alert('Please select a CSV file.');
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append('action', 'auto_alt_import_csv');
+            formData.append('nonce', autoAltAjax.nonce);
+            formData.append('csv_file', file);
+
+            $('#ka_alt_import_result').html('<em>Importing\u2026</em>');
+
+            $.ajax({
+                url: autoAltAjax.ajaxurl,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        var html = '<strong>' + response.data.message + '</strong>';
+                        if (response.data.errors && response.data.errors.length) {
+                            html += '<ul style="color:#cc1818;margin-top:6px;">';
+                            response.data.errors.forEach(function(err) {
+                                html += '<li>' + err + '</li>';
+                            });
+                            html += '</ul>';
+                        }
+                        $('#ka_alt_import_result').html(html);
+                    } else {
+                        $('#ka_alt_import_result').html('<span style="color:#cc1818;">Error: ' + response.data + '</span>');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#ka_alt_import_result').html('<span style="color:#cc1818;">Import failed: ' + error + '</span>');
+                }
+            });
+        });
+
         // Add some visual feedback when hovering over buttons
         $('.button').on('mouseenter', function() {
             $(this).css('opacity', '0.9');

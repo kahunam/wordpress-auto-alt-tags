@@ -335,6 +335,7 @@ class AutoAltTagGenerator {
 		add_action( 'manage_media_custom_column', array( $this, 'media_column_content' ), 10, 2 );
 		add_action( 'wp_ajax_auto_alt_regenerate_single', array( $this, 'ajax_regenerate_single' ) );
 		add_action( 'wp_ajax_auto_alt_export_csv', array( $this, 'ajax_export_csv' ) );
+		add_action( 'wp_ajax_auto_alt_import_csv', array( $this, 'ajax_import_csv' ) );
 		add_action( 'restrict_manage_posts', array( $this, 'media_filter_dropdown' ) );
 		add_filter( 'parse_query', array( $this, 'media_filter_query' ) );
 		add_filter( 'cron_schedules', array( $this, 'add_cron_schedules' ) );
@@ -800,6 +801,103 @@ class AutoAltTagGenerator {
 	}
 
 	/**
+	 * Parse and validate CSV rows for import.
+	 *
+	 * @param array[] $rows Array of associative rows from CSV (header keys as array keys).
+	 * @return array { valid: array<int,string>, errors: string[] }
+	 */
+	public function parse_csv_rows( array $rows ): array {
+		$valid  = array();
+		$errors = array();
+
+		foreach ( $rows as $i => $row ) {
+			$line = $i + 2; // +2: 1-indexed + header row.
+
+			$id       = isset( $row['ID'] ) ? (int) $row['ID'] : 0;
+			$alt_text = isset( $row['Alt Text'] ) ? sanitize_text_field( trim( $row['Alt Text'] ) ) : '';
+
+			if ( $id <= 0 ) {
+				$errors[] = sprintf( __( 'Line %d: invalid ID "%s"', 'auto-alt-tags' ), $line, $row['ID'] ?? '' );
+				continue;
+			}
+
+			if ( empty( $alt_text ) ) {
+				$errors[] = sprintf( __( 'Line %d: empty alt text, skipped', 'auto-alt-tags' ), $line );
+				continue;
+			}
+
+			$valid[ $id ] = $alt_text;
+		}
+
+		return compact( 'valid', 'errors' );
+	}
+
+	/**
+	 * AJAX: import alt text from uploaded CSV.
+	 */
+	public function ajax_import_csv(): void {
+		if ( ! check_ajax_referer( 'auto_alt_nonce', 'nonce', false ) ) {
+			wp_send_json_error( __( 'Security check failed', 'auto-alt-tags' ) );
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Unauthorized', 'auto-alt-tags' ) );
+		}
+
+		if ( ! isset( $_FILES['csv_file'] ) || UPLOAD_ERR_OK !== (int) $_FILES['csv_file']['error'] ) {
+			wp_send_json_error( __( 'No file uploaded or upload error', 'auto-alt-tags' ) );
+		}
+
+		// Validate file extension.
+		$file_ext = strtolower( pathinfo( $_FILES['csv_file']['name'], PATHINFO_EXTENSION ) );
+		if ( ! in_array( $file_ext, array( 'csv', 'txt' ), true ) ) {
+			wp_send_json_error( __( 'Invalid file type. Please upload a CSV file.', 'auto-alt-tags' ) );
+		}
+
+		$handle = fopen( $_FILES['csv_file']['tmp_name'], 'r' );
+		if ( ! $handle ) {
+			wp_send_json_error( __( 'Failed to read uploaded file', 'auto-alt-tags' ) );
+		}
+
+		// Parse header row.
+		$header = fgetcsv( $handle );
+		if ( ! $header || ! in_array( 'ID', $header, true ) || ! in_array( 'Alt Text', $header, true ) ) {
+			fclose( $handle );
+			wp_send_json_error( __( 'Invalid CSV format. Expected columns: ID, Filename, Alt Text, URL', 'auto-alt-tags' ) );
+		}
+
+		$rows = array();
+		while ( ( $line = fgetcsv( $handle ) ) !== false ) {
+			if ( count( $line ) === count( $header ) ) {
+				$rows[] = array_combine( $header, $line );
+			}
+		}
+		fclose( $handle );
+
+		$parsed  = $this->parse_csv_rows( $rows );
+		$updated = 0;
+
+		foreach ( $parsed['valid'] as $attachment_id => $alt_text ) {
+			if ( ! get_post( $attachment_id ) ) {
+				$parsed['errors'][] = sprintf( __( 'ID %d: attachment not found', 'auto-alt-tags' ), $attachment_id );
+				continue;
+			}
+			update_post_meta( $attachment_id, '_wp_attachment_image_alt', $alt_text );
+			$updated++;
+		}
+
+		wp_send_json_success( array(
+			'updated' => $updated,
+			'errors'  => $parsed['errors'],
+			'message' => sprintf(
+				/* translators: %1$d: updated count, %2$d: error count */
+				__( 'Import complete: %1$d updated, %2$d errors.', 'auto-alt-tags' ),
+				$updated,
+				count( $parsed['errors'] )
+			),
+		) );
+	}
+
+	/**
 	 * Render admin page
 	 */
 	public function admin_page(): void {
@@ -900,6 +998,16 @@ class AutoAltTagGenerator {
 					</div>
 
 					<div id="ka_alt_missing_only_notice" style="display:none;margin-top:12px;padding:10px 14px;background:#f0f6fc;border:1px solid #0969da;border-left:4px solid #0969da;border-radius:4px;font-size:13px;"></div>
+
+					<hr style="margin: 20px 0;">
+					<h3><?php esc_html_e( 'Import Alt Text from CSV', 'auto-alt-tags' ); ?></h3>
+					<form id="ka_alt_import_form" enctype="multipart/form-data">
+						<input type="file" id="ka_alt_csv_file" name="csv_file" accept=".csv,.txt" />
+						<button type="submit" class="button button-secondary" id="ka_alt_import_csv">
+							<?php esc_html_e( 'Import CSV', 'auto-alt-tags' ); ?>
+						</button>
+					</form>
+					<div id="ka_alt_import_result" style="margin-top:10px;"></div>
 
 					<!-- Debug Log Area -->
 					<div id="ka_alt_debug_log" style="display: <?php echo $this->debug_mode ? 'block' : 'none'; ?>; margin-top: 20px;">
