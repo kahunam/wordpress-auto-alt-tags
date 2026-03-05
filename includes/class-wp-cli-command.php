@@ -488,7 +488,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 		 *
 		 * @when after_wp_load
 		 */
-		public function retry_failed(): void {
+		public function retry_failed( array $args, array $assoc_args ): void {
 			global $wpdb;
 
 			$ids = $wpdb->get_col(
@@ -501,7 +501,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			);
 
 			if ( empty( $ids ) ) {
-				\WP_CLI::success( 'No failed images found.' );
+				WP_CLI::success( 'No failed images found.' );
 				return;
 			}
 
