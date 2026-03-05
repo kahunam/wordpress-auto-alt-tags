@@ -10,7 +10,7 @@
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: auto-alt-tags
  * Domain Path: /languages
- * Requires at least: 4.1
+ * Requires at least: 5.0
  * Tested up to: 6.7
  * Requires PHP: 7.4
  * Network: false
