@@ -480,6 +480,43 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 		}
 		
 		/**
+		 * Re-queue all images that failed after 3 attempts.
+		 *
+		 * ## EXAMPLES
+		 *
+		 *     wp auto-alt retry-failed
+		 *
+		 * @when after_wp_load
+		 */
+		public function retry_failed(): void {
+			global $wpdb;
+
+			$ids = $wpdb->get_col(
+				$wpdb->prepare(
+					"SELECT post_id FROM {$wpdb->postmeta}
+					WHERE meta_key = %s AND CAST(meta_value AS UNSIGNED) >= %d",
+					'_auto_alt_attempts',
+					3
+				)
+			);
+
+			if ( empty( $ids ) ) {
+				\WP_CLI::success( 'No failed images found.' );
+				return;
+			}
+
+			foreach ( $ids as $id ) {
+				delete_post_meta( (int) $id, '_auto_alt_attempts' );
+			}
+
+			\WP_CLI::success( sprintf(
+				/* translators: %d: number of re-queued images */
+				_n( 'Re-queued %d failed image.', 'Re-queued %d failed images.', count( $ids ), 'auto-alt-tags' ),
+				count( $ids )
+			) );
+		}
+
+		/**
 		 * Call Gemini API to generate alt text
 		 *
 		 * @param string $image_path Path to image file.
