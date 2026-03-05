@@ -29,7 +29,8 @@
 		"phpcbf": "phpcbf --standard=WordPress .",
 		"check": "php bin/wp-plugin-check.php",
 		"build": "bash bin/build.sh",
-		"build:skip-checks": "bash bin/build.sh --skip-checks"
+		"build:skip-checks": "bash bin/build.sh --skip-checks",
+		"i18n": "wp i18n make-pot . languages/auto-alt-tags.pot --domain=auto-alt-tags --exclude=vendor,tests,dist,node_modules"
 	},
 	"config": {
 		"allow-plugins": {
