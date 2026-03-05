@@ -334,6 +334,7 @@ class AutoAltTagGenerator {
 		add_filter( 'manage_media_columns', array( $this, 'media_column_header' ) );
 		add_action( 'manage_media_custom_column', array( $this, 'media_column_content' ), 10, 2 );
 		add_action( 'wp_ajax_auto_alt_regenerate_single', array( $this, 'ajax_regenerate_single' ) );
+		add_action( 'wp_ajax_auto_alt_export_csv', array( $this, 'ajax_export_csv' ) );
 		add_action( 'restrict_manage_posts', array( $this, 'media_filter_dropdown' ) );
 		add_filter( 'parse_query', array( $this, 'media_filter_query' ) );
 		add_filter( 'cron_schedules', array( $this, 'add_cron_schedules' ) );
@@ -749,6 +750,56 @@ class AutoAltTagGenerator {
 	}
 
 	/**
+	 * AJAX: export all image alt text as a CSV download.
+	 */
+	public function ajax_export_csv(): void {
+		if ( ! check_ajax_referer( 'auto_alt_nonce', 'nonce', false ) ) {
+			wp_die( esc_html__( 'Security check failed', 'auto-alt-tags' ) );
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized', 'auto-alt-tags' ) );
+		}
+
+		global $wpdb;
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT p.ID, p.post_title, pm.meta_value AS alt_text, p.guid
+				FROM {$wpdb->posts} p
+				LEFT JOIN {$wpdb->postmeta} pm
+					ON p.ID = pm.post_id AND pm.meta_key = %s
+				WHERE p.post_type = %s
+				AND p.post_mime_type LIKE %s
+				ORDER BY p.ID ASC",
+				'_wp_attachment_image_alt',
+				'attachment',
+				'image/%'
+			),
+			ARRAY_A
+		);
+
+		header( 'Content-Type: text/csv; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="alt-text-export-' . gmdate( 'Y-m-d' ) . '.csv"' );
+		header( 'Pragma: no-cache' );
+		header( 'Expires: 0' );
+
+		$output = fopen( 'php://output', 'w' );
+		fputcsv( $output, array( 'ID', 'Filename', 'Alt Text', 'URL' ) );
+
+		foreach ( $rows as $row ) {
+			fputcsv( $output, array(
+				$row['ID'],
+				$row['post_title'],
+				$row['alt_text'] ?? '',
+				$row['guid'],
+			) );
+		}
+
+		fclose( $output );
+		exit;
+	}
+
+	/**
 	 * Render admin page
 	 */
 	public function admin_page(): void {
@@ -841,6 +892,10 @@ class AutoAltTagGenerator {
 
 						<button id="ka_alt_stop_processing" class="button button-secondary" style="display: none;">
 							<?php esc_html_e( 'Stop Processing', 'auto-alt-tags' ); ?>
+						</button>
+
+						<button id="ka_alt_export_csv" class="button button-secondary">
+							<?php esc_html_e( 'Export Alt Text as CSV', 'auto-alt-tags' ); ?>
 						</button>
 					</div>
 

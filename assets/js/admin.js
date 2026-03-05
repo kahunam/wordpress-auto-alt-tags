@@ -723,6 +723,14 @@
             testProviderKey(provider, apiKey, $(this));
         });
 
+        // Export CSV button
+        $('#ka_alt_export_csv').on('click', function(e) {
+            e.preventDefault();
+            var url = autoAltAjax.ajaxurl
+                + '?action=auto_alt_export_csv&nonce=' + encodeURIComponent(autoAltAjax.nonce);
+            window.location.href = url;
+        });
+
         // Add some visual feedback when hovering over buttons
         $('.button').on('mouseenter', function() {
             $(this).css('opacity', '0.9');
