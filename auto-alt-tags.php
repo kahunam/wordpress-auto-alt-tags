@@ -331,6 +331,9 @@ class AutoAltTagGenerator {
 		$this->auto_generate = (bool) get_option( 'auto_alt_auto_generate', true );
 		add_action( 'add_attachment', array( $this, 'on_attachment_upload' ) );
 		add_action( 'admin_notices', array( $this, 'admin_notice_queue' ) );
+		add_filter( 'manage_media_columns', array( $this, 'media_column_header' ) );
+		add_action( 'manage_media_custom_column', array( $this, 'media_column_content' ), 10, 2 );
+		add_action( 'wp_ajax_auto_alt_regenerate_single', array( $this, 'ajax_regenerate_single' ) );
 		add_filter( 'cron_schedules', array( $this, 'add_cron_schedules' ) );
 		add_action( 'auto_alt_tags_process_queue', array( $this, 'process_queue_via_cron' ) );
 
@@ -465,6 +468,21 @@ class AutoAltTagGenerator {
 	 * @param string $hook Current admin page hook.
 	 */
 	public function enqueue_admin_scripts( string $hook ): void {
+		// Always enqueue media column script on the media library page.
+		if ( 'upload.php' === $GLOBALS['pagenow'] || 'upload' === $hook ) {
+			wp_enqueue_script(
+				'ka-alt-tags-media',
+				AUTO_ALT_TAGS_PLUGIN_URL . 'assets/js/media-column.js',
+				array( 'jquery' ),
+				AUTO_ALT_TAGS_VERSION,
+				true
+			);
+			wp_localize_script( 'ka-alt-tags-media', 'autoAltMedia', array(
+				'ajaxurl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'auto_alt_nonce' ),
+			) );
+		}
+
 		if ( 'media_page_auto-alt-tags' !== $hook ) {
 			return;
 		}
@@ -604,6 +622,68 @@ class AutoAltTagGenerator {
 				count( $queue )
 			) )
 		);
+	}
+
+	/**
+	 * Register the Alt Text column in Media Library list view.
+	 *
+	 * @param string[] $columns Existing columns.
+	 * @return string[]
+	 */
+	public function media_column_header( array $columns ): array {
+		$columns['auto_alt_text'] = __( 'Alt Text', 'auto-alt-tags' );
+		return $columns;
+	}
+
+	/**
+	 * Render the Alt Text column content for each media item.
+	 *
+	 * @param string $column_name Column identifier.
+	 * @param int    $post_id     Attachment post ID.
+	 */
+	public function media_column_content( string $column_name, int $post_id ): void {
+		if ( 'auto_alt_text' !== $column_name ) {
+			return;
+		}
+
+		$alt = get_post_meta( $post_id, '_wp_attachment_image_alt', true );
+
+		if ( ! empty( $alt ) ) {
+			echo '<span style="color:#1e8a44;">' . esc_html( wp_trim_words( $alt, 10, '…' ) ) . '</span>';
+		} else {
+			echo '<span style="color:#cc1818;font-weight:bold;">' . esc_html__( 'Missing', 'auto-alt-tags' ) . '</span>';
+		}
+
+		echo '<br><a href="#" class="auto-alt-regenerate" data-id="' . esc_attr( $post_id ) . '" data-nonce="' . esc_attr( wp_create_nonce( 'auto_alt_nonce' ) ) . '">'
+			. esc_html__( 'Regenerate', 'auto-alt-tags' ) . '</a>';
+	}
+
+	/**
+	 * AJAX: regenerate alt text for a single attachment.
+	 */
+	public function ajax_regenerate_single(): void {
+		if ( ! check_ajax_referer( 'auto_alt_nonce', 'nonce', false ) ) {
+			wp_send_json_error( __( 'Security check failed', 'auto-alt-tags' ) );
+		}
+		if ( ! current_user_can( 'upload_files' ) ) {
+			wp_send_json_error( __( 'Unauthorized', 'auto-alt-tags' ) );
+		}
+
+		$attachment_id = (int) ( $_POST['id'] ?? 0 );
+		if ( ! $attachment_id ) {
+			wp_send_json_error( __( 'Invalid attachment ID', 'auto-alt-tags' ) );
+		}
+
+		// Clear any existing alt text so generate_alt_tag will process it.
+		delete_post_meta( $attachment_id, '_wp_attachment_image_alt' );
+
+		$result = $this->generate_alt_tag( $attachment_id );
+
+		if ( $result['success'] ) {
+			wp_send_json_success( array( 'alt_text' => $result['alt_text'] ) );
+		} else {
+			wp_send_json_error( $result['error'] );
+		}
 	}
 
 	/**

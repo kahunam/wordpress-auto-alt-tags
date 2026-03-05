@@ -497,3 +497,28 @@ if ( ! function_exists( 'checked' ) ) {
 		return $result;
 	}
 }
+
+if ( ! function_exists( 'wp_trim_words' ) ) {
+	/**
+	 * Mock wp_trim_words function
+	 */
+	function wp_trim_words( $text, $num_words = 55, $more = null ) {
+		if ( null === $more ) {
+			$more = '&hellip;';
+		}
+		$words = explode( ' ', $text );
+		if ( count( $words ) <= $num_words ) {
+			return $text;
+		}
+		return implode( ' ', array_slice( $words, 0, $num_words ) ) . $more;
+	}
+}
+
+if ( ! function_exists( 'wp_create_nonce' ) ) {
+	/**
+	 * Mock wp_create_nonce function
+	 */
+	function wp_create_nonce( $action = -1 ) {
+		return 'test_nonce_' . $action;
+	}
+}
