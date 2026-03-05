@@ -453,3 +453,16 @@ if ( ! function_exists( 'update_post_meta' ) ) {
 		return true;
 	}
 }
+
+if ( ! defined( 'OBJECT' ) ) {
+	define( 'OBJECT', 'OBJECT' );
+}
+
+if ( ! function_exists( 'get_post' ) ) {
+	/**
+	 * Mock get_post function
+	 */
+	function get_post( $post_id = null, $output = OBJECT, $filter = 'raw' ) {
+		return null;
+	}
+}

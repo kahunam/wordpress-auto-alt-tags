@@ -347,22 +347,45 @@ class AutoAltTagGenerator {
 	}
 
 	/**
-	 * Schedule WP Cron event on plugin activation.
+	 * Schedule WP Cron event on plugin activation and set default options.
 	 */
 	public static function activate(): void {
+		// Set default options.
+		add_option( 'auto_alt_provider', 'gemini' );
+		add_option( 'auto_alt_batch_size', 10 );
+		add_option( 'auto_alt_image_size', 'medium' );
+		add_option( 'auto_alt_model_name', 'gemini-2.5-flash' );
+		add_option( 'auto_alt_debug_mode', false );
+		add_option( 'auto_alt_custom_prompt', '' );
+		add_option( 'auto_alt_gemini_api_key', '' );
+		add_option( 'auto_alt_openai_api_key', '' );
+		add_option( 'auto_alt_claude_api_key', '' );
+		add_option( 'auto_alt_openrouter_api_key', '' );
+
+		// Schedule cron event.
 		if ( ! wp_next_scheduled( 'auto_alt_tags_process_queue' ) ) {
 			wp_schedule_event( time(), 'every_five_minutes', 'auto_alt_tags_process_queue' );
 		}
 	}
 
 	/**
-	 * Clear WP Cron event on plugin deactivation.
+	 * Clear WP Cron event and transients on plugin deactivation.
 	 */
 	public static function deactivate(): void {
 		$timestamp = wp_next_scheduled( 'auto_alt_tags_process_queue' );
 		if ( $timestamp ) {
 			wp_unschedule_event( $timestamp, 'auto_alt_tags_process_queue' );
 		}
+
+		// Clean up transients.
+		delete_transient( 'auto_alt_offset' );
+		delete_transient( 'auto_alt_success_count' );
+		delete_transient( 'auto_alt_debug_logs' );
+
+		// Clean up rate limit transients for all users.
+		global $wpdb;
+		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_auto_alt_rate_limit_%'" );
+		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_auto_alt_rate_limit_%'" );
 	}
 
 	/**
@@ -2236,31 +2259,3 @@ new AutoAltTagGenerator();
 
 register_activation_hook( AUTO_ALT_TAGS_PLUGIN_FILE, array( 'AutoAltTagGenerator', 'activate' ) );
 register_deactivation_hook( AUTO_ALT_TAGS_PLUGIN_FILE, array( 'AutoAltTagGenerator', 'deactivate' ) );
-
-// Activation hook
-register_activation_hook( __FILE__, function () {
-	// Create any necessary database tables or options here
-	add_option( 'auto_alt_provider', 'gemini' );
-	add_option( 'auto_alt_batch_size', 10 );
-	add_option( 'auto_alt_image_size', 'medium' );
-	add_option( 'auto_alt_model_name', 'gemini-2.5-flash' );
-	add_option( 'auto_alt_debug_mode', false );
-	add_option( 'auto_alt_custom_prompt', '' );
-	add_option( 'auto_alt_gemini_api_key', '' );
-	add_option( 'auto_alt_openai_api_key', '' );
-	add_option( 'auto_alt_claude_api_key', '' );
-	add_option( 'auto_alt_openrouter_api_key', '' );
-} );
-
-// Deactivation hook
-register_deactivation_hook( __FILE__, function () {
-	// Clean up transients
-	delete_transient( 'auto_alt_offset' );
-	delete_transient( 'auto_alt_success_count' );
-	delete_transient( 'auto_alt_debug_logs' );
-	
-	// Clean up rate limit transients for all users
-	global $wpdb;
-	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_auto_alt_rate_limit_%'" );
-	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_auto_alt_rate_limit_%'" );
-} );
