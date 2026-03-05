@@ -199,7 +199,58 @@ class AutoAltTagGenerator {
 		
 		return get_option( $provider_data['api_key_setting'], '' );
 	}
-	
+
+	/**
+	 * Get the current upload queue.
+	 *
+	 * @return int[]
+	 */
+	public function queue_get(): array {
+		$raw = get_option( 'auto_alt_queue', '[]' );
+		$ids = json_decode( $raw, true );
+		return is_array( $ids ) ? array_map( 'intval', $ids ) : [];
+	}
+
+	/**
+	 * Push an attachment ID onto the queue (deduplicated, capped at 500).
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function queue_push( int $attachment_id ): void {
+		$queue = $this->queue_get();
+		if ( in_array( $attachment_id, $queue, true ) ) {
+			return;
+		}
+		$queue[] = $attachment_id;
+		if ( count( $queue ) > 500 ) {
+			$queue = array_slice( $queue, count( $queue ) - 500 );
+		}
+		update_option( 'auto_alt_queue', wp_json_encode( $queue ) );
+	}
+
+	/**
+	 * Pop up to $count IDs from the front of the queue.
+	 *
+	 * @param int $count Number of IDs to pop.
+	 * @return int[]
+	 */
+	public function queue_pop( int $count ): array {
+		$queue = $this->queue_get();
+		if ( empty( $queue ) ) {
+			return [];
+		}
+		$batch = array_splice( $queue, 0, $count );
+		update_option( 'auto_alt_queue', wp_json_encode( array_values( $queue ) ) );
+		return $batch;
+	}
+
+	/**
+	 * Clear the entire queue.
+	 */
+	public function queue_clear(): void {
+		update_option( 'auto_alt_queue', '[]' );
+	}
+
 	/**
 	 * Current Gemini model name
 	 *
@@ -342,6 +393,11 @@ class AutoAltTagGenerator {
 		register_setting( 'auto_alt_tags_settings', 'auto_alt_custom_prompt', array(
 			'sanitize_callback' => 'sanitize_textarea_field',
 			'default'           => '',
+		) );
+
+		register_setting( 'auto_alt_tags_settings', 'auto_alt_queue', array(
+			'sanitize_callback' => 'sanitize_text_field',
+			'default'           => '[]',
 		) );
 	}
 	

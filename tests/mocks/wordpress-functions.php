@@ -300,3 +300,93 @@ if ( ! function_exists( 'esc_html__' ) ) {
 		return esc_html( $text );
 	}
 }
+
+if ( ! function_exists( 'add_action' ) ) {
+	/**
+	 * Mock add_action function
+	 */
+	function add_action( $hook, $callback, $priority = 10, $accepted_args = 1 ) {
+		return true;
+	}
+}
+
+if ( ! function_exists( 'register_activation_hook' ) ) {
+	/**
+	 * Mock register_activation_hook function
+	 */
+	function register_activation_hook( $file, $callback ) {
+		return true;
+	}
+}
+
+if ( ! function_exists( 'register_deactivation_hook' ) ) {
+	/**
+	 * Mock register_deactivation_hook function
+	 */
+	function register_deactivation_hook( $file, $callback ) {
+		return true;
+	}
+}
+
+if ( ! function_exists( 'load_plugin_textdomain' ) ) {
+	/**
+	 * Mock load_plugin_textdomain function
+	 */
+	function load_plugin_textdomain( $domain, $deprecated = false, $plugin_rel_path = false ) {
+		return true;
+	}
+}
+
+if ( ! function_exists( 'plugin_basename' ) ) {
+	/**
+	 * Mock plugin_basename function
+	 */
+	function plugin_basename( $file ) {
+		return basename( dirname( $file ) ) . '/' . basename( $file );
+	}
+}
+
+if ( ! function_exists( 'add_filter' ) ) {
+	/**
+	 * Mock add_filter function
+	 */
+	function add_filter( $hook, $callback, $priority = 10, $accepted_args = 1 ) {
+		return true;
+	}
+}
+
+if ( ! function_exists( 'register_setting' ) ) {
+	/**
+	 * Mock register_setting function
+	 */
+	function register_setting( $option_group, $option_name, $args = array() ) {
+		return true;
+	}
+}
+
+if ( ! function_exists( 'plugin_dir_path' ) ) {
+	/**
+	 * Mock plugin_dir_path function
+	 */
+	function plugin_dir_path( $file ) {
+		return trailingslashit( dirname( $file ) );
+	}
+}
+
+if ( ! function_exists( 'plugin_dir_url' ) ) {
+	/**
+	 * Mock plugin_dir_url function
+	 */
+	function plugin_dir_url( $file ) {
+		return 'http://example.com/wp-content/plugins/' . basename( dirname( $file ) ) . '/';
+	}
+}
+
+if ( ! function_exists( 'trailingslashit' ) ) {
+	/**
+	 * Mock trailingslashit function
+	 */
+	function trailingslashit( $string ) {
+		return rtrim( $string, '/\\' ) . '/';
+	}
+}
