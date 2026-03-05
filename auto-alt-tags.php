@@ -469,7 +469,7 @@ class AutoAltTagGenerator {
 	 */
 	public function enqueue_admin_scripts( string $hook ): void {
 		// Always enqueue media column script on the media library page.
-		if ( 'upload.php' === $GLOBALS['pagenow'] || 'upload' === $hook ) {
+		if ( 'upload.php' === $hook ) {
 			wp_enqueue_script(
 				'ka-alt-tags-media',
 				AUTO_ALT_TAGS_PLUGIN_URL . 'assets/js/media-column.js',
@@ -479,7 +479,6 @@ class AutoAltTagGenerator {
 			);
 			wp_localize_script( 'ka-alt-tags-media', 'autoAltMedia', array(
 				'ajaxurl' => admin_url( 'admin-ajax.php' ),
-				'nonce'   => wp_create_nonce( 'auto_alt_nonce' ),
 			) );
 		}
 
