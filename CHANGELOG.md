@@ -4,7 +4,36 @@ All notable changes to the Auto Alt Tags plugin will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0] - 2026-01-30
+## [Unreleased]
+
+### Planned Features
+- **WordPress.org plugin directory submission**
+- **Advanced filtering options**:
+  - Process by date range
+  - Filter by image size or file type
+  - Exclude specific directories or patterns
+- **Enhanced API support**:
+  - Support for additional AI providers (OpenAI GPT-4V, Claude Vision)
+  - API key rotation for high-volume usage
+  - Rate limiting and quota management
+  - Integration with Gemini 2.5 Pro Deep Think for complex images
+- **Bulk operations**:
+  - Bulk edit existing alt text
+  - Find and replace functionality
+- **Advanced features**:
+  - Alt text quality scoring and suggestions
+  - Integration with popular page builders
+  - SEO analysis and recommendations
+  - Machine learning-based alt text improvement suggestions
+
+### Bug Fixes and Improvements
+- Performance optimizations for large media libraries
+- Enhanced error handling and recovery
+- Improved mobile interface responsiveness
+- Better API timeout management
+- Advanced thinking budget controls for Gemini 2.5 models
+
+## [1.2.0] - 2026-03-06
 
 ### Changed
 - **Updated Gemini Models** - Migrated to current supported models
@@ -121,7 +150,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - API key configuration instructions
 
 ### Technical Details
-- **WordPress compatibility**: 5.0+ 
+- **WordPress compatibility**: 5.0+
 - **PHP compatibility**: 7.4+
 - **Required extensions**: cURL, GD or ImageMagick
 - **API integration**: Gemini Flash 2.5 via Google AI Studio
@@ -134,42 +163,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - **Batch Size Control**: 1-50 images per batch (default: 10)
 - **Image Size Optimization**: 256-2048px maximum (default: 512px)
 - **Processing Controls**: Start/stop functionality with progress monitoring
-
-## [Unreleased]
-
-### Planned Features
-- **WordPress.org plugin directory submission**
-- **Internationalization (i18n) support** with translation files
-- **Advanced filtering options**:
-  - Process by date range
-  - Filter by image size or file type
-  - Exclude specific directories or patterns
-- **Enhanced API support**:
-  - Support for additional AI providers (OpenAI GPT-4V, Claude Vision)
-  - API key rotation for high-volume usage
-  - Rate limiting and quota management
-  - Integration with Gemini 2.5 Pro Deep Think for complex images
-- **Bulk operations**:
-  - Export/import alt text as CSV
-  - Bulk edit existing alt text
-  - Find and replace functionality
-- **Performance improvements**:
-  - Background processing with WordPress cron
-  - Queue management for large media libraries
-  - Memory optimization for resource-constrained hosting
-- **Advanced features**:
-  - Custom prompts for specific image types
-  - Alt text quality scoring and suggestions
-  - Integration with popular page builders
-  - SEO analysis and recommendations
-  - Machine learning-based alt text improvement suggestions
-
-### Bug Fixes and Improvements
-- Performance optimizations for large media libraries
-- Enhanced error handling and recovery
-- Improved mobile interface responsiveness
-- Better API timeout management
-- Advanced thinking budget controls for Gemini 2.5 models
 
 ---
 
@@ -201,7 +194,7 @@ We welcome contributions! Please feel free to submit a Pull Request. For major c
 ### Reporting Issues
 Please use the [GitHub Issues](https://github.com/kahunam/wordpress-auto-alt-tags/issues) page to report bugs or request features. Include:
 - WordPress version
-- PHP version  
+- PHP version
 - Plugin version
 - Steps to reproduce the issue
 - Any error messages
