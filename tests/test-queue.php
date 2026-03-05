@@ -61,4 +61,18 @@ class QueueTest extends PHPUnit\Framework\TestCase {
 		$this->plugin->queue_clear();
 		$this->assertSame( [], $this->plugin->queue_get() );
 	}
+
+	public function test_queue_get_returns_empty_on_corrupt_data(): void {
+		global $mock_options;
+		$mock_options['auto_alt_queue'] = 'not-valid-json';
+		$queue = $this->plugin->queue_get();
+		$this->assertSame( [], $queue );
+	}
+
+	public function test_queue_pop_with_zero_count_returns_empty(): void {
+		$this->plugin->queue_push( 5 );
+		$batch = $this->plugin->queue_pop( 0 );
+		$this->assertSame( [], $batch );
+		$this->assertContains( 5, $this->plugin->queue_get() );
+	}
 }

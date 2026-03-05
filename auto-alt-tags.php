@@ -223,6 +223,7 @@ class AutoAltTagGenerator {
 		}
 		$queue[] = $attachment_id;
 		if ( count( $queue ) > 500 ) {
+			// Keep the 500 most-recently-pushed items; drop the oldest entries.
 			$queue = array_slice( $queue, count( $queue ) - 500 );
 		}
 		update_option( 'auto_alt_queue', wp_json_encode( $queue ) );
@@ -235,6 +236,9 @@ class AutoAltTagGenerator {
 	 * @return int[]
 	 */
 	public function queue_pop( int $count ): array {
+		if ( $count <= 0 ) {
+			return [];
+		}
 		$queue = $this->queue_get();
 		if ( empty( $queue ) ) {
 			return [];
@@ -396,7 +400,13 @@ class AutoAltTagGenerator {
 		) );
 
 		register_setting( 'auto_alt_tags_settings', 'auto_alt_queue', array(
-			'sanitize_callback' => 'sanitize_text_field',
+			'sanitize_callback' => function( $value ) {
+				$decoded = json_decode( $value, true );
+				if ( ! is_array( $decoded ) ) {
+					return '[]';
+				}
+				return wp_json_encode( array_map( 'intval', $decoded ) );
+			},
 			'default'           => '[]',
 		) );
 	}
