@@ -330,6 +330,8 @@ class AutoAltTagGenerator {
 		$this->debug_mode = (bool) get_option( 'auto_alt_debug_mode', false );
 		$this->auto_generate = (bool) get_option( 'auto_alt_auto_generate', true );
 		add_action( 'add_attachment', array( $this, 'on_attachment_upload' ) );
+		add_filter( 'cron_schedules', array( $this, 'add_cron_schedules' ) );
+		add_action( 'auto_alt_tags_process_queue', array( $this, 'process_queue_via_cron' ) );
 
 		// Load WP-CLI command if available
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
@@ -343,7 +345,96 @@ class AutoAltTagGenerator {
 	public function load_textdomain(): void {
 		load_plugin_textdomain( 'auto-alt-tags', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 	}
-	
+
+	/**
+	 * Schedule WP Cron event on plugin activation.
+	 */
+	public static function activate(): void {
+		if ( ! wp_next_scheduled( 'auto_alt_tags_process_queue' ) ) {
+			wp_schedule_event( time(), 'every_five_minutes', 'auto_alt_tags_process_queue' );
+		}
+	}
+
+	/**
+	 * Clear WP Cron event on plugin deactivation.
+	 */
+	public static function deactivate(): void {
+		$timestamp = wp_next_scheduled( 'auto_alt_tags_process_queue' );
+		if ( $timestamp ) {
+			wp_unschedule_event( $timestamp, 'auto_alt_tags_process_queue' );
+		}
+	}
+
+	/**
+	 * Register custom cron interval (every 5 minutes).
+	 *
+	 * @param array $schedules Existing WP cron schedules.
+	 * @return array
+	 */
+	public function add_cron_schedules( array $schedules ): array {
+		if ( ! isset( $schedules['every_five_minutes'] ) ) {
+			$schedules['every_five_minutes'] = array(
+				'interval' => 300,
+				'display'  => __( 'Every Five Minutes', 'auto-alt-tags' ),
+			);
+		}
+		return $schedules;
+	}
+
+	/**
+	 * WP Cron callback — processes a batch of queued images.
+	 */
+	public function process_queue_via_cron(): void {
+		$queue = $this->queue_get();
+		if ( empty( $queue ) ) {
+			return;
+		}
+
+		$provider = get_option( 'auto_alt_provider', 'gemini' );
+		$api_key  = $this->get_current_api_key( $provider );
+
+		if ( empty( $api_key ) ) {
+			$this->debug_log( 'Cron: no API key configured, skipping queue processing' );
+			return;
+		}
+
+		$batch_size = (int) get_option( 'auto_alt_batch_size', $this->batch_size );
+		$batch      = $this->queue_pop( $batch_size );
+
+		$this->debug_log( sprintf( 'Cron: processing batch of %d queued images', count( $batch ) ) );
+
+		foreach ( $batch as $attachment_id ) {
+			// Skip if alt text was set since it was queued.
+			$existing = get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
+			if ( ! empty( $existing ) ) {
+				continue;
+			}
+
+			$attempts_key = '_auto_alt_attempts';
+			$attempts     = (int) get_post_meta( $attachment_id, $attempts_key, true );
+
+			if ( $attempts >= 3 ) {
+				$this->debug_log( sprintf( 'Cron: skipping image ID %d (3 failed attempts)', $attachment_id ) );
+				continue;
+			}
+
+			$result = $this->generate_alt_tag( (int) $attachment_id );
+
+			if ( $result['success'] ) {
+				delete_post_meta( $attachment_id, $attempts_key );
+				$this->debug_log( sprintf( 'Cron: success for image ID %d', $attachment_id ) );
+			} else {
+				update_post_meta( $attachment_id, $attempts_key, $attempts + 1 );
+				$this->debug_log( sprintf( 'Cron: failure for image ID %d (attempt %d)', $attachment_id, $attempts + 1 ) );
+
+				// Re-queue for retry unless max attempts reached.
+				if ( $attempts + 1 < 3 ) {
+					$this->queue_push( $attachment_id );
+				}
+			}
+		}
+	}
+
 	/**
 	 * Enqueue admin scripts and styles
 	 *
@@ -2142,6 +2233,9 @@ class AutoAltTagGenerator {
 
 // Initialize the plugin
 new AutoAltTagGenerator();
+
+register_activation_hook( AUTO_ALT_TAGS_PLUGIN_FILE, array( 'AutoAltTagGenerator', 'activate' ) );
+register_deactivation_hook( AUTO_ALT_TAGS_PLUGIN_FILE, array( 'AutoAltTagGenerator', 'deactivate' ) );
 
 // Activation hook
 register_activation_hook( __FILE__, function () {

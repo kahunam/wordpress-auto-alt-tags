@@ -408,3 +408,48 @@ if ( ! function_exists( 'get_post_meta' ) ) {
 		return ''; // default: no existing meta
 	}
 }
+
+if ( ! function_exists( 'wp_next_scheduled' ) ) {
+	/**
+	 * Mock wp_next_scheduled function
+	 */
+	function wp_next_scheduled( $hook, $args = array() ) {
+		return false;
+	}
+}
+
+if ( ! function_exists( 'wp_schedule_event' ) ) {
+	/**
+	 * Mock wp_schedule_event function
+	 */
+	function wp_schedule_event( $timestamp, $recurrence, $hook, $args = array() ) {
+		return true;
+	}
+}
+
+if ( ! function_exists( 'wp_unschedule_event' ) ) {
+	/**
+	 * Mock wp_unschedule_event function
+	 */
+	function wp_unschedule_event( $timestamp, $hook, $args = array() ) {
+		return true;
+	}
+}
+
+if ( ! function_exists( 'delete_post_meta' ) ) {
+	/**
+	 * Mock delete_post_meta function
+	 */
+	function delete_post_meta( $post_id, $meta_key, $meta_value = '' ) {
+		return true;
+	}
+}
+
+if ( ! function_exists( 'update_post_meta' ) ) {
+	/**
+	 * Mock update_post_meta function
+	 */
+	function update_post_meta( $post_id, $meta_key, $meta_value, $prev_value = '' ) {
+		return true;
+	}
+}
