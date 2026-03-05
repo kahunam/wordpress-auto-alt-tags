@@ -6,7 +6,9 @@
  */
 
 // Define test constants
-define( 'AUTO_ALT_TAGS_TESTING', true );
+if ( ! defined( 'AUTO_ALT_TAGS_TESTING' ) ) {
+	define( 'AUTO_ALT_TAGS_TESTING', true );
+}
 
 // Load WordPress test environment if available
 $_tests_dir = getenv( 'WP_TESTS_DIR' );

@@ -755,22 +755,24 @@
                 processData: false,
                 contentType: false,
                 success: function(response) {
+                    var $result = $('#ka_alt_import_result');
+                    $result.empty();
+
                     if (response.success) {
-                        var html = '<strong>' + response.data.message + '</strong>';
+                        $('<strong>').text(response.data.message).appendTo($result);
                         if (response.data.errors && response.data.errors.length) {
-                            html += '<ul style="color:#cc1818;margin-top:6px;">';
+                            var $ul = $('<ul>').css({'color': '#cc1818', 'margin-top': '6px'}).appendTo($result);
                             response.data.errors.forEach(function(err) {
-                                html += '<li>' + err + '</li>';
+                                $('<li>').text(err).appendTo($ul);
                             });
-                            html += '</ul>';
                         }
-                        $('#ka_alt_import_result').html(html);
                     } else {
-                        $('#ka_alt_import_result').html('<span style="color:#cc1818;">Error: ' + response.data + '</span>');
+                        $('<span>').css('color', '#cc1818').text('Error: ' + response.data).appendTo($result);
                     }
                 },
                 error: function(xhr, status, error) {
-                    $('#ka_alt_import_result').html('<span style="color:#cc1818;">Import failed: ' + error + '</span>');
+                    $('#ka_alt_import_result').empty()
+                        .append($('<span>').css('color', '#cc1818').text('Import failed: ' + error));
                 }
             });
         });
