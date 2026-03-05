@@ -5,6 +5,12 @@
  * @package AutoAltTags\Tests
  */
 
+// Mock global $pagenow
+global $pagenow;
+if ( ! isset( $pagenow ) ) {
+	$pagenow = 'upload.php';
+}
+
 // Mock WordPress options storage
 global $mock_options;
 $mock_options = array(
@@ -520,5 +526,53 @@ if ( ! function_exists( 'wp_create_nonce' ) ) {
 	 */
 	function wp_create_nonce( $action = -1 ) {
 		return 'test_nonce_' . $action;
+	}
+}
+
+if ( ! function_exists( 'selected' ) ) {
+	/**
+	 * Mock selected function
+	 */
+	function selected( $selected, $current = true, $echo = true ) {
+		$result = ( (string) $selected === (string) $current ) ? ' selected="selected"' : '';
+		if ( $echo ) {
+			echo $result;
+		}
+		return $result;
+	}
+}
+
+if ( ! function_exists( 'esc_html_e' ) ) {
+	/**
+	 * Mock esc_html_e function
+	 */
+	function esc_html_e( $text, $domain = 'default' ) {
+		echo esc_html( $text );
+	}
+}
+
+if ( ! class_exists( 'WP_Query' ) ) {
+	/**
+	 * Minimal WP_Query mock for unit tests.
+	 */
+	class WP_Query {
+		private array $query_vars = [];
+		private bool $main_query  = true;
+
+		public function is_main_query(): bool {
+			return $this->main_query;
+		}
+
+		public function set( string $key, $value ): void {
+			$this->query_vars[ $key ] = $value;
+		}
+
+		public function get( string $key, $default = '' ) {
+			return $this->query_vars[ $key ] ?? $default;
+		}
+
+		public function set_main_query( bool $value ): void {
+			$this->main_query = $value;
+		}
 	}
 }

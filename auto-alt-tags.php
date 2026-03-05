@@ -334,6 +334,8 @@ class AutoAltTagGenerator {
 		add_filter( 'manage_media_columns', array( $this, 'media_column_header' ) );
 		add_action( 'manage_media_custom_column', array( $this, 'media_column_content' ), 10, 2 );
 		add_action( 'wp_ajax_auto_alt_regenerate_single', array( $this, 'ajax_regenerate_single' ) );
+		add_action( 'restrict_manage_posts', array( $this, 'media_filter_dropdown' ) );
+		add_filter( 'parse_query', array( $this, 'media_filter_query' ) );
 		add_filter( 'cron_schedules', array( $this, 'add_cron_schedules' ) );
 		add_action( 'auto_alt_tags_process_queue', array( $this, 'process_queue_via_cron' ) );
 
@@ -682,6 +684,67 @@ class AutoAltTagGenerator {
 			wp_send_json_success( array( 'alt_text' => $result['alt_text'] ) );
 		} else {
 			wp_send_json_error( $result['error'] );
+		}
+	}
+
+	/**
+	 * Add "Filter by Alt Text" dropdown to Media Library toolbar.
+	 *
+	 * @param string $post_type Current post type.
+	 */
+	public function media_filter_dropdown( string $post_type ): void {
+		if ( 'attachment' !== $post_type ) {
+			return;
+		}
+
+		$selected = sanitize_text_field( $_GET['auto_alt_filter'] ?? '' );
+		?>
+		<select name="auto_alt_filter" id="auto_alt_filter">
+			<option value=""><?php esc_html_e( 'All Alt Text', 'auto-alt-tags' ); ?></option>
+			<option value="has" <?php selected( $selected, 'has' ); ?>><?php esc_html_e( 'Has Alt Text', 'auto-alt-tags' ); ?></option>
+			<option value="missing" <?php selected( $selected, 'missing' ); ?>><?php esc_html_e( 'Missing Alt Text', 'auto-alt-tags' ); ?></option>
+		</select>
+		<?php
+	}
+
+	/**
+	 * Apply alt text filter to the Media Library query.
+	 *
+	 * @param \WP_Query $query Current query.
+	 */
+	public function media_filter_query( \WP_Query $query ): void {
+		global $pagenow;
+
+		if ( 'upload.php' !== $pagenow || ! $query->is_main_query() ) {
+			return;
+		}
+
+		$filter = sanitize_text_field( $_GET['auto_alt_filter'] ?? '' );
+		if ( ! in_array( $filter, array( 'has', 'missing' ), true ) ) {
+			return;
+		}
+
+		if ( 'missing' === $filter ) {
+			$query->set( 'meta_query', array(
+				'relation' => 'OR',
+				array(
+					'key'     => '_wp_attachment_image_alt',
+					'value'   => '',
+					'compare' => '=',
+				),
+				array(
+					'key'     => '_wp_attachment_image_alt',
+					'compare' => 'NOT EXISTS',
+				),
+			) );
+		} else {
+			$query->set( 'meta_query', array(
+				array(
+					'key'     => '_wp_attachment_image_alt',
+					'value'   => '',
+					'compare' => '!=',
+				),
+			) );
 		}
 	}
 
