@@ -330,6 +330,7 @@ class AutoAltTagGenerator {
 		$this->debug_mode = (bool) get_option( 'auto_alt_debug_mode', false );
 		$this->auto_generate = (bool) get_option( 'auto_alt_auto_generate', true );
 		add_action( 'add_attachment', array( $this, 'on_attachment_upload' ) );
+		add_action( 'admin_notices', array( $this, 'admin_notice_queue' ) );
 		add_filter( 'cron_schedules', array( $this, 'add_cron_schedules' ) );
 		add_action( 'auto_alt_tags_process_queue', array( $this, 'process_queue_via_cron' ) );
 
@@ -537,6 +538,11 @@ class AutoAltTagGenerator {
 			'default'           => 'medium',
 		) );
 		
+		register_setting( 'auto_alt_tags_settings', 'auto_alt_auto_generate', array(
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => true,
+		) );
+
 		register_setting( 'auto_alt_tags_settings', 'auto_alt_debug_mode', array(
 			'sanitize_callback' => 'rest_sanitize_boolean',
 			'default'           => false,
@@ -565,13 +571,41 @@ class AutoAltTagGenerator {
 	public function add_admin_menu(): void {
 		add_media_page(
 			__( 'Auto Alt Tags', 'auto-alt-tags' ),
-			__( 'Auto Alt Tags', 'auto-alt-tags' ), 
+			__( 'Auto Alt Tags', 'auto-alt-tags' ),
 			'manage_options',
 			'auto-alt-tags',
 			array( $this, 'admin_page' )
 		);
 	}
-	
+
+	/**
+	 * Show admin notice when background queue has pending images.
+	 */
+	public function admin_notice_queue(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$queue = $this->queue_get();
+		if ( empty( $queue ) ) {
+			return;
+		}
+
+		printf(
+			'<div class="notice notice-info is-dismissible"><p>%s</p></div>',
+			esc_html( sprintf(
+				/* translators: %d: number of images in queue */
+				_n(
+					'Auto Alt Tags is processing %d image in the background.',
+					'Auto Alt Tags is processing %d images in the background.',
+					count( $queue ),
+					'auto-alt-tags'
+				),
+				count( $queue )
+			) )
+		);
+	}
+
 	/**
 	 * Render admin page
 	 */
@@ -930,14 +964,33 @@ class AutoAltTagGenerator {
 							
 							<tr>
 								<th scope="row">
+									<label for="auto_alt_auto_generate"><?php esc_html_e( 'Auto-generate on Upload', 'auto-alt-tags' ); ?></label>
+								</th>
+								<td>
+									<label for="auto_alt_auto_generate">
+										<input type="checkbox"
+											   id="auto_alt_auto_generate"
+											   name="auto_alt_auto_generate"
+											   value="1"
+											   <?php checked( get_option( 'auto_alt_auto_generate', true ) ); ?> />
+										<?php esc_html_e( 'Automatically queue new image uploads for alt text generation', 'auto-alt-tags' ); ?>
+									</label>
+									<p class="description">
+										<?php esc_html_e( 'When enabled, images uploaded to the Media Library are automatically queued and processed in the background every 5 minutes.', 'auto-alt-tags' ); ?>
+									</p>
+								</td>
+							</tr>
+
+							<tr>
+								<th scope="row">
 									<label for="auto_alt_debug_mode"><?php esc_html_e( 'Debug Mode', 'auto-alt-tags' ); ?></label>
 								</th>
 								<td>
 									<label for="auto_alt_debug_mode">
-										<input type="checkbox" 
-											   id="auto_alt_debug_mode" 
-											   name="auto_alt_debug_mode" 
-											   value="1" 
+										<input type="checkbox"
+											   id="auto_alt_debug_mode"
+											   name="auto_alt_debug_mode"
+											   value="1"
 											   <?php checked( get_option( 'auto_alt_debug_mode', false ) ); ?> />
 										<?php esc_html_e( 'Enable debug logging', 'auto-alt-tags' ); ?>
 									</label>

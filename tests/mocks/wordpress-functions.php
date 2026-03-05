@@ -466,3 +466,34 @@ if ( ! function_exists( 'get_post' ) ) {
 		return null;
 	}
 }
+
+if ( ! function_exists( 'current_user_can' ) ) {
+	/**
+	 * Mock current_user_can function
+	 */
+	function current_user_can( $capability ) {
+		return true; // default: always authorized in tests
+	}
+}
+
+if ( ! function_exists( '_n' ) ) {
+	/**
+	 * Mock _n function (singular/plural translation)
+	 */
+	function _n( $single, $plural, $number, $domain = 'default' ) {
+		return $number === 1 ? $single : $plural;
+	}
+}
+
+if ( ! function_exists( 'checked' ) ) {
+	/**
+	 * Mock checked function
+	 */
+	function checked( $checked, $current = true, $echo = true ) {
+		$result = ( (string) $checked === (string) $current ) ? ' checked="checked"' : '';
+		if ( $echo ) {
+			echo $result;
+		}
+		return $result;
+	}
+}

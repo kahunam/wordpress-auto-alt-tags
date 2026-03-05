@@ -94,4 +94,21 @@ class QueueTest extends PHPUnit\Framework\TestCase {
 		$plugin->on_attachment_upload( 99 );
 		$this->assertNotContains( 99, $plugin->queue_get() );
 	}
+
+	public function test_admin_notice_queue_outputs_notice_when_queue_has_items(): void {
+		$this->plugin->queue_push( 5 );
+		$this->plugin->queue_push( 6 );
+		ob_start();
+		$this->plugin->admin_notice_queue();
+		$output = ob_get_clean();
+		$this->assertStringContainsString( 'notice-info', $output );
+		$this->assertStringContainsString( '2 images', $output );
+	}
+
+	public function test_admin_notice_queue_outputs_nothing_when_queue_empty(): void {
+		ob_start();
+		$this->plugin->admin_notice_queue();
+		$output = ob_get_clean();
+		$this->assertSame( '', $output );
+	}
 }
