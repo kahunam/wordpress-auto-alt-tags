@@ -19,56 +19,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Gemini 2.5 Flash is the recommended model for production use
 - Gemini 3 models are available in preview for advanced vision capabilities
 
-## [1.1.0] - 2025-05-27
+## [1.1.0] - 2026-03-05
 
 ### Added
-- **Debug Mode** - Built-in debugging with real-time logs for troubleshooting
-  - Toggle in settings to enable/disable debug logging
-  - Real-time log display in admin interface
-  - Detailed API request and response logging
-  - Error tracking with timestamps
-- **API Test Button** - Test your API connection before processing images
-  - Verifies API key validity
-  - Checks model availability
-  - Displays test response
-- **Model Selection** - Choose from available Gemini models
-  - Gemini 2.5 Flash (recommended)
-  - Gemini 2.5 Flash Lite (cost-effective)
-  - Gemini 3 Flash Preview (latest)
-  - Gemini 3 Pro Preview (most capable)
-- **WordPress Thumbnail Support** - Use existing WordPress image sizes
-  - Dropdown to select from registered image sizes
-  - Eliminates custom image resizing code
-  - Significant cost savings by using smaller images
+- Auto-generation on upload: new images are queued automatically when uploaded
+- Background processing via WP Cron (every 5 minutes, configurable batch size)
+- Failure retry logic: up to 3 attempts per image, then drop with log
+- WP-CLI `retry-failed` command to re-queue previously failed images
+- Media Library "Alt Text" column with inline Regenerate link
+- Media Library filter: All / Has Alt Text / Missing Alt Text
+- CSV export of all attachment alt text (ID, Filename, Alt Text, URL)
+- CSV import with per-row validation and structured result report
+- `uninstall.php`: clean removal of all plugin data on uninstall
+- `readme.txt` in WordPress.org format
+- POT file at `languages/auto-alt-tags.pot` + `composer i18n` command
 
 ### Changed
-- **Updated API Models** - Migrated from non-existent models to valid ones
-  - Removed: `gemini-2.5-flash-preview-05-20` (doesn't exist)
-  - Default: `gemini-2.0-flash` (current recommended model)
-- **Improved UI** - Now uses WordPress default admin components
-  - Removed all custom CSS requirements
-  - Uses native WordPress `.card` components
-  - Standard WordPress buttons and form tables
-  - Native progress element for better compatibility
-- **Better Error Handling** - Enhanced error messages and debugging
-  - More descriptive error messages
-  - API response code logging
-  - Detailed debug information when enabled
-
-### Fixed
-- **API Request Issues** - Fixed model endpoint and authentication
-  - Corrected API URL structure
-  - Proper v1beta endpoint usage
-  - Valid model names
-- **Dependencies** - Removed unnecessary custom code
-  - No longer uses `wp_get_image_editor()` for resizing
-  - Uses `wp_get_attachment_image_src()` for thumbnails
-  - Cleaner, more maintainable codebase
-
-### Security
-- Enhanced input validation and sanitization
-- Improved nonce verification
-- Better error logging without exposing sensitive data
+- Requires WordPress 5.0 or later (was 4.1)
+- Tested up to WordPress 6.7
 
 ## [1.0.1] - 2025-05-26
 

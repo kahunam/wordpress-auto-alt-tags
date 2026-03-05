@@ -2,11 +2,11 @@
 /**
  * Plugin Name: Auto Alt Tag Generator
  * Plugin URI: https://github.com/kahunam/wordpress-auto-alt-tags
- * Description: Automatically generates alt tags for images using AI APIs (Gemini, OpenAI, Claude, OpenRouter). Includes batch processing, cost optimization, preview testing, and WP-CLI support.
- * Version: 1.0.1
+ * Description: Automatically generates alt tags for images using AI APIs. Features auto-generation on upload, background processing via WP Cron, Media Library integration (column, filter, per-image regenerate), CSV import/export, and WP-CLI support.
+ * Version: 1.1.0
  * Author: Kahunam
  * Author URI: https://github.com/kahunam
- * License: GPL v2 or later
+ * License: GPLv2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: auto-alt-tags
  * Domain Path: /languages
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'AUTO_ALT_TAGS_VERSION', '1.0.1' );
+define( 'AUTO_ALT_TAGS_VERSION', '1.1.0' );
 define( 'AUTO_ALT_TAGS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'AUTO_ALT_TAGS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'AUTO_ALT_TAGS_PLUGIN_FILE', __FILE__ );
