@@ -75,4 +75,23 @@ class QueueTest extends PHPUnit\Framework\TestCase {
 		$this->assertSame( [], $batch );
 		$this->assertContains( 5, $this->plugin->queue_get() );
 	}
+
+	public function test_on_attachment_upload_queues_image(): void {
+		global $mock_options;
+		$mock_options['auto_alt_auto_generate'] = true;
+		$mock_options['auto_alt_queue']          = json_encode( [] );
+		// Re-instantiate so __construct picks up the new option value.
+		$plugin = new AutoAltTagGenerator();
+		$plugin->on_attachment_upload( 99 );
+		$this->assertContains( 99, $plugin->queue_get() );
+	}
+
+	public function test_on_attachment_upload_skips_when_disabled(): void {
+		global $mock_options;
+		$mock_options['auto_alt_auto_generate'] = false;
+		$mock_options['auto_alt_queue']          = json_encode( [] );
+		$plugin = new AutoAltTagGenerator();
+		$plugin->on_attachment_upload( 99 );
+		$this->assertNotContains( 99, $plugin->queue_get() );
+	}
 }

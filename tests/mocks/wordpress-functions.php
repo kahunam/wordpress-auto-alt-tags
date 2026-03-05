@@ -390,3 +390,21 @@ if ( ! function_exists( 'trailingslashit' ) ) {
 		return rtrim( $string, '/\\' ) . '/';
 	}
 }
+
+if ( ! function_exists( 'wp_attachment_is_image' ) ) {
+	/**
+	 * Mock wp_attachment_is_image function
+	 */
+	function wp_attachment_is_image( $post_id ) {
+		return true; // default: treat all as images in tests
+	}
+}
+
+if ( ! function_exists( 'get_post_meta' ) ) {
+	/**
+	 * Mock get_post_meta function
+	 */
+	function get_post_meta( $post_id, $key = '', $single = false ) {
+		return ''; // default: no existing meta
+	}
+}

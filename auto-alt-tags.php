@@ -256,6 +256,31 @@ class AutoAltTagGenerator {
 	}
 
 	/**
+	 * Handle new image upload — push to queue if auto-generate is enabled.
+	 *
+	 * @param int $attachment_id Newly uploaded attachment ID.
+	 */
+	public function on_attachment_upload( int $attachment_id ): void {
+		if ( ! $this->auto_generate ) {
+			return;
+		}
+
+		// Only queue images, not other attachment types.
+		if ( ! wp_attachment_is_image( $attachment_id ) ) {
+			return;
+		}
+
+		// Skip if alt text already set (e.g. imported from another plugin).
+		$existing = get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
+		if ( ! empty( $existing ) ) {
+			return;
+		}
+
+		$this->queue_push( $attachment_id );
+		$this->debug_log( sprintf( 'Queued uploaded image ID %d for background processing', $attachment_id ) );
+	}
+
+	/**
 	 * Current Gemini model name
 	 *
 	 * @var string
@@ -268,7 +293,14 @@ class AutoAltTagGenerator {
 	 * @var bool
 	 */
 	private bool $debug_mode = false;
-	
+
+	/**
+	 * Auto-generate on upload flag
+	 *
+	 * @var bool
+	 */
+	private bool $auto_generate = true;
+
 	/**
 	 * Default prompt for alt text generation
 	 *
@@ -296,7 +328,9 @@ class AutoAltTagGenerator {
 		$this->current_api_key = $this->get_current_api_key( $this->current_provider );
 		$this->model_name = get_option( 'auto_alt_model_name', 'gemini-2.5-flash' );
 		$this->debug_mode = (bool) get_option( 'auto_alt_debug_mode', false );
-		
+		$this->auto_generate = (bool) get_option( 'auto_alt_auto_generate', true );
+		add_action( 'add_attachment', array( $this, 'on_attachment_upload' ) );
+
 		// Load WP-CLI command if available
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			require_once AUTO_ALT_TAGS_PLUGIN_DIR . 'includes/class-wp-cli-command.php';
