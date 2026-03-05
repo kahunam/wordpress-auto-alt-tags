@@ -11,7 +11,7 @@
  * Text Domain: auto-alt-tags
  * Domain Path: /languages
  * Requires at least: 4.1
- * Tested up to: 6.6
+ * Tested up to: 6.7
  * Requires PHP: 7.4
  * Network: false
  *

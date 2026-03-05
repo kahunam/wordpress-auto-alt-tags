@@ -1,195 +1,79 @@
-=== Auto Alt Tag Generator ===
+=== Auto Alt Tags ===
 Contributors: kahunam
-Tags: alt tags, accessibility, seo, images, ai, gemini, openai, claude, media library, automation, wcag, ada compliance
-Requires at least: 4.1
-Tested up to: 6.6
+Tags: alt text, accessibility, AI, images, SEO
+Requires at least: 5.0
+Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.0.1
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Automatically generate descriptive alt tags for images using AI (Gemini, OpenAI, Claude, OpenRouter). Improve accessibility and SEO with one click.
+Automatically generates descriptive alt tags for WordPress images using AI (Gemini, OpenAI, Claude, OpenRouter).
 
 == Description ==
 
-**Auto Alt Tag Generator** uses advanced AI to automatically generate descriptive, SEO-friendly alt tags for your WordPress media library images. Supporting multiple AI providers (Google Gemini, OpenAI, Claude, OpenRouter), this plugin helps improve your website's accessibility compliance and search engine optimization.
+Auto Alt Tags uses AI to automatically generate descriptive, accessible alt text for images in your WordPress media library. Supports Google Gemini, OpenAI, Anthropic Claude, and OpenRouter.
 
-= Key Features =
+**Features:**
 
-* **Multiple AI Providers**: Choose from Gemini (default), OpenAI GPT-4, Claude, or OpenRouter
-* **Batch Processing**: Generate alt tags for hundreds of images with progress tracking
-* **Cost Optimization**: Uses smaller image sizes (configurable) to minimize API costs
-* **Smart Processing**: Skip images that already have alt tags
-* **Preview Mode**: Test with 5 images before processing entire library
-* **WP-CLI Support**: Automate alt tag generation via command line
-* **Debug Mode**: Detailed logging for troubleshooting
-* **Custom Prompts**: Customize AI instructions for your specific needs
-* **Resume Capability**: Automatically resume interrupted batch processing
-
-= Supported AI Providers =
-
-* **Google Gemini** - Fast, cost-effective, supports latest models including gemini-2.5-flash and gemini-3-flash-preview
-* **OpenAI** - GPT-4 Vision and GPT-4o models
-* **Anthropic Claude** - Claude 3 models with vision capabilities
-* **OpenRouter** - Access multiple AI models through one API
-
-= Benefits =
-
-* **Improved Accessibility**: Meet WCAG 2.1 and ADA compliance requirements
-* **Better SEO**: Search engines use alt tags to understand image content
-* **Time Savings**: Automate hours of manual alt tag writing
-* **Consistent Quality**: AI generates descriptive, contextual alt tags
-* **Flexible Configuration**: Choose models, batch sizes, and prompts
-
-= WP-CLI Commands =
-
-Generate alt tags from the command line:
-
-`wp auto-alt generate --limit=50 --dry-run`
-`wp auto-alt stats`
-`wp auto-alt test-api`
-
-= Privacy & Security =
-
-* API keys stored securely in WordPress database
-* Images processed are sent to your chosen AI provider's API
-* No data is stored or collected by the plugin author
-* All API communications use secure HTTPS
-* Supports configuration via wp-config.php for enhanced security
+* Multiple AI providers: Gemini, OpenAI, Claude, OpenRouter
+* Auto-generation on upload (background WP Cron processing)
+* Batch processing with real-time progress tracking
+* Resume capability if interrupted
+* Media Library column showing alt text status per image
+* Filter Media Library by alt text presence
+* Per-image regenerate button
+* CSV export and import for bulk editing
+* WP-CLI support (`wp auto-alt generate`, `wp auto-alt stats`, `wp auto-alt retry-failed`)
+* Debug mode with real-time logs
+* Custom prompt support
+* Rate limit awareness per provider
 
 == Installation ==
 
-1. Upload the `auto-alt-tags` folder to `/wp-content/plugins/`
-2. Activate the plugin through the 'Plugins' menu in WordPress
-3. Navigate to Media → Auto Alt Tags
-4. Enter your API key for your chosen provider
-5. Configure settings (model, batch size, image size)
-6. Click "Test First 5 Images" to preview
-7. Click "Start Processing" to generate alt tags
-
-= API Key Setup =
-
-**Option 1: Via Plugin Settings**
-1. Go to Media → Auto Alt Tags
-2. Select your AI provider
-3. Enter your API key
-4. Click "Test API Connection"
-
-**Option 2: Via wp-config.php (Recommended for production)**
-Add to your wp-config.php:
-`define('GEMINI_API_KEY', 'your-api-key-here');`
-`define('OPENAI_API_KEY', 'your-api-key-here');`
-`define('CLAUDE_API_KEY', 'your-api-key-here');`
-`define('OPENROUTER_API_KEY', 'your-api-key-here');`
-
-= Getting API Keys =
-
-* **Gemini**: [Get API Key](https://makersuite.google.com/app/apikey)
-* **OpenAI**: [Get API Key](https://platform.openai.com/api-keys)
-* **Claude**: [Get API Key](https://console.anthropic.com/settings/keys)
-* **OpenRouter**: [Get API Key](https://openrouter.ai/keys)
+1. Upload the plugin to `/wp-content/plugins/auto-alt-tags/`
+2. Activate the plugin through the WordPress Plugins screen
+3. Go to **Media → Auto Alt Tags**
+4. Select your AI provider and enter your API key
+5. Click **Test Key** to verify your setup
+6. Click **Start Auto-Tagging All Images**
 
 == Frequently Asked Questions ==
 
-= Is this plugin free? =
+= Which AI provider should I use? =
 
-Yes, the plugin is completely free. You only pay for the AI API usage based on your chosen provider's pricing.
+Google Gemini is recommended. It offers a generous free tier and excellent image analysis.
 
-= Which AI provider should I choose? =
+= Does it overwrite existing alt text? =
 
-* **Gemini**: Best balance of cost and quality (recommended)
-* **OpenAI**: Excellent quality, higher cost
-* **Claude**: Great for detailed descriptions
-* **OpenRouter**: Access to multiple models
+No. The plugin only processes images that do not already have alt text.
 
-= How much does it cost to generate alt tags? =
+= Can I run it from the command line? =
 
-Costs vary by provider and model. With Gemini 2.5 Flash (default):
-* Approximately $0.01-0.02 per 100 images
-* Using medium-sized images (default) reduces costs by 70-90%
+Yes. Use `wp auto-alt generate` for bulk processing, `wp auto-alt stats` for statistics, and `wp auto-alt retry-failed` to re-queue failed images.
 
-= Can I customize the alt tag generation? =
+= Will it automatically process images I upload? =
 
-Yes! You can:
-* Choose different AI models
-* Adjust batch processing size
-* Select image size for processing
-* Write custom prompts for specific requirements
-
-= What happens if processing is interrupted? =
-
-The plugin automatically saves progress and can resume from where it stopped. Just click "Start Processing" again.
-
-= Will this overwrite existing alt tags? =
-
-No, by default the plugin only processes images without alt tags. Existing alt tags are preserved.
-
-= Is my data safe? =
-
-Yes. Images are only sent to your chosen AI provider's API for processing. No data is collected or stored by the plugin author.
-
-= Can I use this with WP-CLI? =
-
-Yes! The plugin includes full WP-CLI support:
-`wp auto-alt generate --limit=100`
-`wp auto-alt stats`
-`wp auto-alt test-api`
-
-= What image formats are supported? =
-
-The plugin supports all image formats that WordPress supports: JPEG, PNG, GIF, WebP, and AVIF.
-
-= How can I test before processing all images? =
-
-Use the "Test First 5 Images" button to preview alt tag generation before processing your entire library.
-
-== Screenshots ==
-
-1. Main plugin interface showing statistics and processing controls
-2. Settings panel with AI provider selection and configuration
-3. Batch processing in progress with real-time updates
-4. Debug log showing detailed processing information
-5. WP-CLI commands in action
-6. Generated alt tags in Media Library
+Yes, when "Auto-generate on Upload" is enabled (default), new images are queued and processed in the background every 5 minutes.
 
 == Changelog ==
 
+= 1.1.0 =
+* Added: Auto-generation on upload via WP Cron background processing
+* Added: Alt Text column in Media Library list view
+* Added: Filter Media Library by alt text status
+* Added: Per-image Regenerate button
+* Added: CSV export and import
+* Added: uninstall.php for clean removal
+* Added: Translation-ready POT file
+
+= 1.0.1 =
+* Updated Gemini models to current supported versions
 
 = 1.0.0 =
 * Initial release
-* Support for multiple AI providers (Gemini, OpenAI, Claude, OpenRouter)
-* Batch processing with progress tracking
-* Cost optimization through configurable image sizes
-* WP-CLI support for automation
-* Custom prompt support
-* Debug mode for troubleshooting
-* Resume capability for interrupted processing
-* Test mode for previewing results
-* Comprehensive settings panel
-* Full internationalization support
 
 == Upgrade Notice ==
 
-= 1.0.0 =
-Initial release with support for multiple AI providers, batch processing, and WP-CLI integration.
-
-== Additional Information ==
-
-= System Requirements =
-
-* WordPress 4.1 or higher
-* PHP 7.4 or higher
-* Active internet connection
-* Valid API key from supported provider
-
-= Support =
-
-For support, feature requests, or bug reports, please visit our [GitHub repository](https://github.com/kahunam/wordpress-auto-alt-tags).
-
-= Contributing =
-
-We welcome contributions! Please see our [Contributing Guidelines](https://github.com/kahunam/wordpress-auto-alt-tags/blob/main/CONTRIBUTING.md).
-
-= License =
-
-This plugin is licensed under GPL v2 or later. You are free to use, modify, and distribute it under the terms of the GPL license.
+= 1.1.0 =
+Adds background auto-generation on upload and Media Library integration. No breaking changes.
