@@ -708,6 +708,93 @@
             .prop('disabled', n === 0);
     }
 
+    /**
+     * Process selected images batch-by-batch (Select Images tab)
+     *
+     * @param {number[]} remainingIds  IDs not yet processed this run
+     * @param {number}   totalSelected Total IDs when the run started
+     */
+    function processSelectedBatch(remainingIds, totalSelected) {
+        if (shouldStop || remainingIds.length === 0) {
+            isProcessing = false;
+            shouldStop   = false;
+            $('#ka_alt_select_progress').hide();
+            $('#ka_alt_select_toolbar').show();
+            if (remainingIds.length === 0) {
+                $('#ka_alt_select_progress_text').text('Done! Alt tags generated.');
+            }
+            return;
+        }
+
+        // Build POST data with image_ids[] for the existing process_alt_tags handler
+        const postData = {
+            action: 'process_alt_tags',
+            nonce:  autoAltAjax.nonce
+        };
+        remainingIds.forEach(function(id, i) {
+            postData['image_ids[' + i + ']'] = id;
+        });
+
+        $.ajax({
+            url:  autoAltAjax.ajaxurl,
+            type: 'POST',
+            data: postData,
+            success: function(response) {
+                if (!response.success) {
+                    isProcessing = false;
+                    $('#ka_alt_select_progress').hide();
+                    $('#ka_alt_select_toolbar').show();
+                    alert('Error: ' + response.data);
+                    return;
+                }
+
+                const d           = response.data;
+                const batchDone   = d.batch_success || 0;
+                const processed   = totalSelected - remainingIds.length + batchDone;
+                const pct         = Math.round((processed / totalSelected) * 100);
+
+                $('#ka_alt_select_progress_bar').val(pct);
+                $('#ka_alt_select_progress_pct').text(pct + '%');
+                $('#ka_alt_select_progress_text').text(
+                    'Processed ' + processed + ' of ' + totalSelected + ' images'
+                );
+
+                // Mark the first batchDone items as done in the visible grid
+                if (batchDone > 0) {
+                    remainingIds.slice(0, batchDone).forEach(function(id) {
+                        $('#ka_alt_image_grid .ka_alt_grid_item[data-id="' + id + '"]')
+                            .addClass('ka_alt_done');
+                        selectedIds.delete(id);
+                    });
+                    updateSelectionUI();
+                }
+
+                if (d.completed) {
+                    $('#ka_alt_select_progress_bar').val(100);
+                    $('#ka_alt_select_progress_pct').text('100%');
+                    $('#ka_alt_select_progress_text').text('Done! Alt tags generated.');
+                    isProcessing = false;
+                    setTimeout(function() {
+                        $('#ka_alt_select_progress').hide();
+                        $('#ka_alt_select_toolbar').show();
+                    }, 2000);
+                } else {
+                    // Continue with remaining IDs (drop the batch we just processed)
+                    const newRemaining = remainingIds.slice(batchDone || 1);
+                    setTimeout(function() {
+                        processSelectedBatch(newRemaining, totalSelected);
+                    }, 500);
+                }
+            },
+            error: function(xhr, status, error) {
+                isProcessing = false;
+                $('#ka_alt_select_progress').hide();
+                $('#ka_alt_select_toolbar').show();
+                alert('Error processing images: ' + error);
+            }
+        });
+    }
+
     // Document ready
     $(document).ready(function() {
 
@@ -929,6 +1016,32 @@
         });
         $('#ka_alt_grid_next').on('click', function() {
             if (gridCurrentPage < gridTotalPages) loadGrid(gridCurrentPage + 1);
+        });
+
+        // Generate Selected button
+        $('#ka_alt_generate_selected').on('click', function() {
+            if (isProcessing) return;
+            if (selectedIds.size === 0) return;
+            if (!confirm('Generate alt tags for ' + selectedIds.size + ' selected image(s)?')) return;
+
+            isProcessing = true;
+            shouldStop   = false;
+
+            $('#ka_alt_select_toolbar').hide();
+            $('#ka_alt_select_progress').show();
+            $('#ka_alt_select_progress_bar').val(0);
+            $('#ka_alt_select_progress_pct').text('0%');
+            $('#ka_alt_select_progress_text').text('Starting\u2026');
+
+            const ids = Array.from(selectedIds);
+            processSelectedBatch(ids, ids.length);
+        });
+
+        // Stop button (Select Images tab)
+        $('#ka_alt_select_stop').on('click', function() {
+            shouldStop = true;
+            debugLog('Stop requested (Select Images tab)');
+            $(this).text('Stopping\u2026');
         });
     });
 
