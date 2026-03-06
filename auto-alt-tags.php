@@ -1767,10 +1767,18 @@ class AutoAltTagGenerator {
 		
 		$this->debug_log( 'Starting alt tag processing...' );
 
-		// Always query fresh — only images that still need alt text are returned.
-		// This means failed images from a previous batch are naturally retried.
-		$images_without_alt = $this->get_images_without_alt();
-		$total_remaining    = count( $images_without_alt );
+		// If specific IDs were posted (Select Images tab), process only those.
+		// Otherwise fall back to querying all images missing alt text.
+		$posted_ids = isset( $_POST['image_ids'] ) && is_array( $_POST['image_ids'] )
+			? array_values( array_filter( array_map( 'intval', $_POST['image_ids'] ), fn( $id ) => $id > 0 ) )
+			: array();
+
+		if ( ! empty( $posted_ids ) ) {
+			$images_without_alt = $posted_ids;
+		} else {
+			$images_without_alt = $this->get_images_without_alt();
+		}
+		$total_remaining = count( $images_without_alt );
 
 		$this->debug_log( sprintf( 'Found %d images without alt text', $total_remaining ) );
 

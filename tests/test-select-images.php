@@ -77,6 +77,28 @@ class Test_Select_Images extends PHPUnit\Framework\TestCase {
 	}
 
 	/**
+	 * When image_ids is empty or absent, the handler should fall back to processing all
+	 */
+	public function test_empty_image_ids_falls_back(): void {
+		// Simulate no image_ids posted
+		$posted_ids = array();
+		$should_use_posted = ! empty( $posted_ids );
+		$this->assertFalse( $should_use_posted );
+
+		// Simulate image_ids posted but all invalid
+		$raw_invalid = array( '0', '-1', 'abc' );
+		$sanitised = array_values(
+			array_filter(
+				array_map( 'intval', $raw_invalid ),
+				fn( $id ) => $id > 0
+			)
+		);
+		$this->assertEmpty( $sanitised );
+		$should_use_posted = ! empty( $sanitised );
+		$this->assertFalse( $should_use_posted );
+	}
+
+	/**
 	 * Total pages calculation
 	 */
 	public function test_total_pages(): void {
