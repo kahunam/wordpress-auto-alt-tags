@@ -718,6 +718,7 @@
         if (shouldStop || remainingIds.length === 0) {
             isProcessing = false;
             shouldStop   = false;
+            $('#ka_alt_select_stop').text('Stop');
             $('#ka_alt_select_progress').hide();
             $('#ka_alt_select_toolbar').show();
             if (remainingIds.length === 0) {
@@ -779,8 +780,17 @@
                         $('#ka_alt_select_toolbar').show();
                     }, 2000);
                 } else {
+                    // If nothing was processed and we are not done, surface the failure
+                    // to avoid silently dropping images or looping forever.
+                    if (batchDone === 0) {
+                        isProcessing = false;
+                        $('#ka_alt_select_progress').hide();
+                        $('#ka_alt_select_toolbar').show();
+                        alert('No images were processed in the last batch. Check API settings or the debug log.');
+                        return;
+                    }
                     // Continue with remaining IDs (drop the batch we just processed)
-                    const newRemaining = remainingIds.slice(batchDone || 1);
+                    const newRemaining = remainingIds.slice(batchDone);
                     setTimeout(function() {
                         processSelectedBatch(newRemaining, totalSelected);
                     }, 500);
