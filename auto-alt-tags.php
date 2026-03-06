@@ -1346,7 +1346,7 @@ class AutoAltTagGenerator {
 						<div id="ka_alt_select_progress" style="display:none; margin-bottom:20px;">
 							<progress id="ka_alt_select_progress_bar" value="0" max="100" style="width:100%; height:24px;"></progress>
 							<div style="display:flex; justify-content:space-between; margin-top:6px;">
-								<span id="ka_alt_select_progress_text"><?php esc_html_e( 'Starting\u2026', 'auto-alt-tags' ); ?></span>
+								<span id="ka_alt_select_progress_text"><?php esc_html_e( 'Starting…', 'auto-alt-tags' ); ?></span>
 								<span id="ka_alt_select_progress_pct">0%</span>
 							</div>
 							<button id="ka_alt_select_stop" class="button" style="margin-top:8px;"><?php esc_html_e( 'Stop', 'auto-alt-tags' ); ?></button>
@@ -1354,7 +1354,7 @@ class AutoAltTagGenerator {
 
 						<!-- Image Grid -->
 						<div id="ka_alt_image_grid" class="ka_alt_image_grid">
-							<p id="ka_alt_grid_loading"><?php esc_html_e( 'Loading images\u2026', 'auto-alt-tags' ); ?></p>
+							<p id="ka_alt_grid_loading"><?php esc_html_e( 'Loading images…', 'auto-alt-tags' ); ?></p>
 						</div>
 
 						<!-- Pagination -->
