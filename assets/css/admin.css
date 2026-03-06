@@ -489,3 +489,127 @@
 .ka_alt_hidden {
     display: none !important;
 }
+
+/* ---- Select Images Tab ---- */
+
+/* Tab navigation bar */
+.ka_alt_tab_nav {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid #0073aa;
+    margin-bottom: 20px;
+}
+
+.ka_alt_tab_btn {
+    background: #f1f1f1;
+    border: 1px solid #ccd0d4;
+    border-bottom: none;
+    padding: 8px 20px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #23282d;
+    border-radius: 3px 3px 0 0;
+    margin-right: 4px;
+    transition: background 0.15s;
+}
+
+.ka_alt_tab_btn:hover {
+    background: #e2e2e2;
+}
+
+.ka_alt_tab_btn.ka_alt_tab_active {
+    background: #fff;
+    border-bottom: 2px solid #fff;
+    color: #0073aa;
+    font-weight: 600;
+    margin-bottom: -2px;
+}
+
+/* Image grid */
+.ka_alt_image_grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+@media (max-width: 900px) {
+    .ka_alt_image_grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .ka_alt_image_grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Individual grid cell */
+.ka_alt_grid_item {
+    position: relative;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+    background: #f9f9f9;
+    transition: border-color 0.15s;
+}
+
+.ka_alt_grid_item:hover {
+    border-color: #0073aa;
+}
+
+.ka_alt_grid_item.ka_alt_selected {
+    border-color: #0073aa;
+    background: #e8f4fb;
+}
+
+.ka_alt_grid_item img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    display: block;
+}
+
+/* Checkbox overlay */
+.ka_alt_grid_item input[type="checkbox"] {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #0073aa;
+    z-index: 2;
+}
+
+/* Title below thumbnail */
+.ka_alt_grid_title {
+    font-size: 11px;
+    color: #555;
+    padding: 4px 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Done overlay (green checkmark after generation) */
+.ka_alt_grid_item.ka_alt_done::after {
+    content: '✓';
+    position: absolute;
+    inset: 0;
+    background: rgba(30, 138, 68, 0.75);
+    color: #fff;
+    font-size: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+}
+
+/* Pagination row */
+#ka_alt_grid_pagination {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
