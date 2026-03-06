@@ -640,7 +640,7 @@
         gridCurrentPage = page;
         const $grid = $('#ka_alt_image_grid');
         $grid.html('<p id="ka_alt_grid_loading">Loading images\u2026</p>');
-        $('#ka_alt_grid_pagination').css('display', '');
+        $('#ka_alt_grid_pagination').css('display', 'none');
 
         $.ajax({
             url: autoAltAjax.ajaxurl,
@@ -687,7 +687,7 @@
                     $('#ka_alt_grid_next').prop('disabled', gridCurrentPage >= gridTotalPages);
                     $('#ka_alt_grid_pagination').css('display', 'flex');
                 } else {
-                    $('#ka_alt_grid_pagination').css('display', '');
+                    $('#ka_alt_grid_pagination').css('display', 'none');
                 }
             },
             error: function() {
