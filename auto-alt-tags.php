@@ -336,6 +336,7 @@ class AutoAltTagGenerator {
 		add_action( 'wp_ajax_auto_alt_regenerate_single', array( $this, 'ajax_regenerate_single' ) );
 		add_action( 'wp_ajax_auto_alt_export_csv', array( $this, 'ajax_export_csv' ) );
 		add_action( 'wp_ajax_auto_alt_import_csv', array( $this, 'ajax_import_csv' ) );
+		add_action( 'wp_ajax_auto_alt_get_missing_images', array( $this, 'ajax_get_missing_images_paginated' ) );
 		add_action( 'restrict_manage_posts', array( $this, 'media_filter_dropdown' ) );
 		add_filter( 'parse_query', array( $this, 'media_filter_query' ) );
 		add_filter( 'cron_schedules', array( $this, 'add_cron_schedules' ) );
@@ -1654,6 +1655,82 @@ class AutoAltTagGenerator {
 		);
 	}
 	
+	/**
+	 * AJAX: return a paginated list of images missing alt text (for the Select Images tab).
+	 *
+	 * POST params: page (int, default 1), per_page (int, default 24), nonce.
+	 * Response: { images: [{id, thumbnail_url, title}], total, page, per_page, total_pages }
+	 */
+	public function ajax_get_missing_images_paginated(): void {
+		if ( ! check_ajax_referer( 'auto_alt_nonce', 'nonce', false ) ) {
+			wp_send_json_error( __( 'Security check failed', 'auto-alt-tags' ) );
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Unauthorized', 'auto-alt-tags' ) );
+		}
+
+		$page     = max( 1, (int) ( $_POST['page'] ?? 1 ) );
+		$per_page = max( 1, min( 100, (int) ( $_POST['per_page'] ?? 24 ) ) );
+		$offset   = ( $page - 1 ) * $per_page;
+
+		global $wpdb;
+
+		$total = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*)
+				FROM {$wpdb->posts} p
+				LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = %s
+				WHERE p.post_type = %s
+				AND p.post_mime_type LIKE %s
+				AND (pm.meta_value IS NULL OR pm.meta_value = %s)",
+				'_wp_attachment_image_alt',
+				'attachment',
+				'image/%',
+				''
+			)
+		);
+
+		$ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT p.ID
+				FROM {$wpdb->posts} p
+				LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = %s
+				WHERE p.post_type = %s
+				AND p.post_mime_type LIKE %s
+				AND (pm.meta_value IS NULL OR pm.meta_value = %s)
+				ORDER BY p.ID ASC
+				LIMIT %d OFFSET %d",
+				'_wp_attachment_image_alt',
+				'attachment',
+				'image/%',
+				'',
+				$per_page,
+				$offset
+			)
+		);
+
+		$image_size = get_option( 'auto_alt_image_size', 'medium' );
+		$images     = array();
+
+		foreach ( $ids as $id ) {
+			$id       = (int) $id;
+			$thumb    = wp_get_attachment_image_src( $id, $image_size );
+			$images[] = array(
+				'id'            => $id,
+				'thumbnail_url' => $thumb ? $thumb[0] : '',
+				'title'         => get_the_title( $id ),
+			);
+		}
+
+		wp_send_json_success( array(
+			'images'      => $images,
+			'total'       => $total,
+			'page'        => $page,
+			'per_page'    => $per_page,
+			'total_pages' => max( 1, (int) ceil( $total / $per_page ) ),
+		) );
+	}
+
 	/**
 	 * AJAX handler for processing alt tags
 	 */
