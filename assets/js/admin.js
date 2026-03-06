@@ -14,6 +14,12 @@
     let totalImages = 0;
     let processedImages = 0;
 
+    let selectedIds     = new Set();  // persists across pagination
+    let gridCurrentPage = 1;
+    let gridTotalPages  = 1;
+    let gridTotal       = 0;
+    const GRID_PER_PAGE = 24;
+
     /**
      * Log debug message to console and UI
      */
@@ -627,6 +633,80 @@
         });
     }
 
+    /**
+     * Load the image grid for the Select Images tab
+     */
+    function loadGrid(page) {
+        gridCurrentPage = page;
+        const $grid = $('#ka_alt_image_grid');
+        $grid.html('<p id="ka_alt_grid_loading">Loading images\u2026</p>');
+        $('#ka_alt_grid_pagination').css('display', '');
+
+        $.ajax({
+            url: autoAltAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action:   'auto_alt_get_missing_images',
+                nonce:    autoAltAjax.nonce,
+                page:     page,
+                per_page: GRID_PER_PAGE
+            },
+            success: function(response) {
+                if (!response.success) {
+                    $grid.html('<p>Error loading images.</p>');
+                    return;
+                }
+
+                const data = response.data;
+                gridTotalPages = data.total_pages;
+                gridTotal      = data.total;
+
+                if (!data.images.length) {
+                    $grid.html('<p>' + (gridTotal === 0 ? 'No images missing alt text.' : 'No images on this page.') + '</p>');
+                    return;
+                }
+
+                $grid.empty();
+                data.images.forEach(function(img) {
+                    const checked  = selectedIds.has(img.id) ? 'checked' : '';
+                    const selClass = selectedIds.has(img.id) ? ' ka_alt_selected' : '';
+                    const $item = $(
+                        '<div class="ka_alt_grid_item' + selClass + '" data-id="' + img.id + '">' +
+                        '<input type="checkbox" ' + checked + ' aria-label="' + $('<div>').text(img.title).html() + '">' +
+                        '<img src="' + img.thumbnail_url + '" alt="" loading="lazy">' +
+                        '<div class="ka_alt_grid_title">' + $('<div>').text(img.title).html() + '</div>' +
+                        '</div>'
+                    );
+                    $grid.append($item);
+                });
+
+                // Pagination controls
+                if (gridTotalPages > 1) {
+                    $('#ka_alt_grid_page_info').text('Page ' + gridCurrentPage + ' of ' + gridTotalPages);
+                    $('#ka_alt_grid_prev').prop('disabled', gridCurrentPage <= 1);
+                    $('#ka_alt_grid_next').prop('disabled', gridCurrentPage >= gridTotalPages);
+                    $('#ka_alt_grid_pagination').css('display', 'flex');
+                } else {
+                    $('#ka_alt_grid_pagination').css('display', '');
+                }
+            },
+            error: function() {
+                $grid.html('<p>Failed to load images. Please refresh and try again.</p>');
+            }
+        });
+    }
+
+    /**
+     * Sync the toolbar count label and Generate button with selectedIds
+     */
+    function updateSelectionUI() {
+        const n = selectedIds.size;
+        $('#ka_alt_select_count').text(n + ' selected');
+        $('#ka_alt_generate_selected')
+            .text('Generate Alt Tags for Selected (' + n + ')')
+            .prop('disabled', n === 0);
+    }
+
     // Document ready
     $(document).ready(function() {
 
@@ -782,6 +862,72 @@
             $(this).css('opacity', '0.9');
         }).on('mouseleave', function() {
             $(this).css('opacity', '1');
+        });
+
+        // --- Select Images Tab ---
+
+        // Tab switching
+        $('.ka_alt_tab_btn').on('click', function() {
+            const tab = $(this).data('tab');
+            $('.ka_alt_tab_btn').removeClass('ka_alt_tab_active').attr('aria-selected', 'false');
+            $(this).addClass('ka_alt_tab_active').attr('aria-selected', 'true');
+            $('.ka_alt_tab_panel').hide();
+            $('#ka_alt_tab_' + tab.replace(/-/g, '_')).show();
+
+            if (tab === 'select-images' && $('#ka_alt_image_grid').children('#ka_alt_grid_loading, .ka_alt_grid_item').length === 0) {
+                loadGrid(1);
+            }
+        });
+
+        // Checkbox toggle (delegated — grid is dynamic)
+        $('#ka_alt_image_grid').on('change', 'input[type="checkbox"]', function() {
+            const $item = $(this).closest('.ka_alt_grid_item');
+            const id    = parseInt($item.data('id'), 10);
+            if (this.checked) {
+                selectedIds.add(id);
+                $item.addClass('ka_alt_selected');
+            } else {
+                selectedIds.delete(id);
+                $item.removeClass('ka_alt_selected');
+            }
+            updateSelectionUI();
+        });
+
+        // Clicking the whole cell toggles the checkbox
+        $('#ka_alt_image_grid').on('click', '.ka_alt_grid_item', function(e) {
+            if ($(e.target).is('input[type="checkbox"]')) return;
+            $(this).find('input[type="checkbox"]').trigger('click');
+        });
+
+        // Select All / Deselect All
+        $('#ka_alt_select_all').on('click', function() {
+            const $unchecked = $('#ka_alt_image_grid input[type="checkbox"]:not(:checked)');
+            if ($unchecked.length > 0) {
+                // Select all visible
+                $('#ka_alt_image_grid .ka_alt_grid_item').each(function() {
+                    const id = parseInt($(this).data('id'), 10);
+                    selectedIds.add(id);
+                    $(this).addClass('ka_alt_selected').find('input').prop('checked', true);
+                });
+                $(this).text('Deselect All');
+            } else {
+                // Deselect all visible
+                $('#ka_alt_image_grid .ka_alt_grid_item').each(function() {
+                    const id = parseInt($(this).data('id'), 10);
+                    selectedIds.delete(id);
+                    $(this).removeClass('ka_alt_selected').find('input').prop('checked', false);
+                });
+                $(this).text('Select All');
+            }
+            updateSelectionUI();
+        });
+
+        // Pagination
+        $('#ka_alt_grid_prev').on('click', function() {
+            if (gridCurrentPage > 1) loadGrid(gridCurrentPage - 1);
+        });
+        $('#ka_alt_grid_next').on('click', function() {
+            if (gridCurrentPage < gridTotalPages) loadGrid(gridCurrentPage + 1);
         });
     });
 
