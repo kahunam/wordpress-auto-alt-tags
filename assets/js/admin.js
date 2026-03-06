@@ -670,13 +670,14 @@
                 data.images.forEach(function(img) {
                     const checked  = selectedIds.has(img.id) ? 'checked' : '';
                     const selClass = selectedIds.has(img.id) ? ' ka_alt_selected' : '';
-                    const $item = $(
-                        '<div class="ka_alt_grid_item' + selClass + '" data-id="' + img.id + '">' +
-                        '<input type="checkbox" ' + checked + ' aria-label="' + $('<div>').text(img.title).html() + '">' +
-                        '<img src="' + img.thumbnail_url + '" alt="" loading="lazy">' +
-                        '<div class="ka_alt_grid_title">' + $('<div>').text(img.title).html() + '</div>' +
-                        '</div>'
-                    );
+                    const safeTitle = $('<div>').text(img.title).html();
+
+                    const $item = $('<div class="ka_alt_grid_item' + selClass + '" data-id="' + img.id + '">');
+                    const $cb = $('<input type="checkbox">').prop('checked', selectedIds.has(img.id)).attr('aria-label', img.title);
+                    const $img = $('<img alt="" loading="lazy">').attr('src', img.thumbnail_url);
+                    const $title = $('<div class="ka_alt_grid_title">').html(safeTitle);
+
+                    $item.append($cb, $img, $title);
                     $grid.append($item);
                 });
 
@@ -874,7 +875,7 @@
             $('.ka_alt_tab_panel').hide();
             $('#ka_alt_tab_' + tab.replace(/-/g, '_')).show();
 
-            if (tab === 'select-images' && $('#ka_alt_image_grid').children('#ka_alt_grid_loading, .ka_alt_grid_item').length === 0) {
+            if (tab === 'select-images' && $('#ka_alt_image_grid .ka_alt_grid_item').length === 0) {
                 loadGrid(1);
             }
         });
