@@ -952,6 +952,19 @@ class AutoAltTagGenerator {
 				</div>
 			<?php endif; ?>
 
+			<!-- Tab Navigation -->
+			<div class="ka_alt_tab_nav" role="tablist">
+				<button class="ka_alt_tab_btn ka_alt_tab_active" data-tab="generate-all" role="tab" aria-selected="true">
+					<?php esc_html_e( 'Generate All', 'auto-alt-tags' ); ?>
+				</button>
+				<button class="ka_alt_tab_btn" data-tab="select-images" role="tab" aria-selected="false">
+					<?php esc_html_e( 'Select Images', 'auto-alt-tags' ); ?>
+				</button>
+			</div>
+
+			<!-- Tab: Generate All (existing content) -->
+			<div id="ka_alt_tab_generate_all" class="ka_alt_tab_panel" role="tabpanel">
+
 			<!-- Top row: Generate Alt Tags (left) | Cost & Security (right) -->
 			<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; margin-bottom: 20px;">
 			<div><!-- left: Generate Alt Tags -->
@@ -1312,6 +1325,49 @@ class AutoAltTagGenerator {
 				</div>
 			</div>
 			</div><!-- end Settings card -->
+			</div><!-- end ka_alt_tab_generate_all -->
+
+			<!-- Tab: Select Images -->
+			<div id="ka_alt_tab_select_images" class="ka_alt_tab_panel" style="display:none;" role="tabpanel">
+				<div class="card">
+					<h2 class="title"><?php esc_html_e( 'Select Images to Tag', 'auto-alt-tags' ); ?></h2>
+					<div class="inside">
+
+						<!-- Toolbar -->
+						<div id="ka_alt_select_toolbar" style="display:flex; align-items:center; gap:16px; margin-bottom:16px; flex-wrap:wrap;">
+							<button id="ka_alt_select_all" class="button"><?php esc_html_e( 'Select All', 'auto-alt-tags' ); ?></button>
+							<span id="ka_alt_select_count" style="color:#555;"><?php esc_html_e( '0 selected', 'auto-alt-tags' ); ?></span>
+							<button id="ka_alt_generate_selected" class="button button-primary" disabled>
+								<?php esc_html_e( 'Generate Alt Tags for Selected (0)', 'auto-alt-tags' ); ?>
+							</button>
+						</div>
+
+						<!-- Progress (hidden by default) -->
+						<div id="ka_alt_select_progress" style="display:none; margin-bottom:20px;">
+							<progress id="ka_alt_select_progress_bar" value="0" max="100" style="width:100%; height:24px;"></progress>
+							<div style="display:flex; justify-content:space-between; margin-top:6px;">
+								<span id="ka_alt_select_progress_text"><?php esc_html_e( 'Starting\u2026', 'auto-alt-tags' ); ?></span>
+								<span id="ka_alt_select_progress_pct">0%</span>
+							</div>
+							<button id="ka_alt_select_stop" class="button" style="margin-top:8px;"><?php esc_html_e( 'Stop', 'auto-alt-tags' ); ?></button>
+						</div>
+
+						<!-- Image Grid -->
+						<div id="ka_alt_image_grid" class="ka_alt_image_grid">
+							<p id="ka_alt_grid_loading"><?php esc_html_e( 'Loading images\u2026', 'auto-alt-tags' ); ?></p>
+						</div>
+
+						<!-- Pagination -->
+						<div id="ka_alt_grid_pagination" style="display:none; margin-top:16px; display:flex; align-items:center; gap:12px;">
+							<button id="ka_alt_grid_prev" class="button" disabled><?php esc_html_e( '&laquo; Prev', 'auto-alt-tags' ); ?></button>
+							<span id="ka_alt_grid_page_info"></span>
+							<button id="ka_alt_grid_next" class="button"><?php esc_html_e( 'Next &raquo;', 'auto-alt-tags' ); ?></button>
+						</div>
+
+					</div><!-- .inside -->
+				</div><!-- .card -->
+			</div><!-- end ka_alt_tab_select_images -->
+
 		</div>
 		<?php
 	}
