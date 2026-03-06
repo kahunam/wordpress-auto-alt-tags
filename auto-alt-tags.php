@@ -1358,7 +1358,7 @@ class AutoAltTagGenerator {
 						</div>
 
 						<!-- Pagination -->
-						<div id="ka_alt_grid_pagination" style="display:none; margin-top:16px; display:flex; align-items:center; gap:12px;">
+						<div id="ka_alt_grid_pagination" style="display:none; margin-top:16px;">
 							<button id="ka_alt_grid_prev" class="button" disabled><?php esc_html_e( '&laquo; Prev', 'auto-alt-tags' ); ?></button>
 							<span id="ka_alt_grid_page_info"></span>
 							<button id="ka_alt_grid_next" class="button"><?php esc_html_e( 'Next &raquo;', 'auto-alt-tags' ); ?></button>
