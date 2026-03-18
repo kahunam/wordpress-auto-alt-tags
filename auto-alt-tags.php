@@ -226,7 +226,7 @@ class AutoAltTagGenerator {
 			// Keep the 500 most-recently-pushed items; drop the oldest entries.
 			$queue = array_slice( $queue, count( $queue ) - 500 );
 		}
-		update_option( 'auto_alt_queue', wp_json_encode( $queue ) );
+		update_option( 'auto_alt_queue', wp_json_encode( $queue ), false );
 	}
 
 	/**
@@ -244,7 +244,7 @@ class AutoAltTagGenerator {
 			return [];
 		}
 		$batch = array_splice( $queue, 0, $count );
-		update_option( 'auto_alt_queue', wp_json_encode( array_values( $queue ) ) );
+		update_option( 'auto_alt_queue', wp_json_encode( array_values( $queue ) ), false );
 		return $batch;
 	}
 
@@ -252,7 +252,7 @@ class AutoAltTagGenerator {
 	 * Clear the entire queue.
 	 */
 	public function queue_clear(): void {
-		update_option( 'auto_alt_queue', '[]' );
+		update_option( 'auto_alt_queue', '[]', false );
 	}
 
 	/**
@@ -306,6 +306,20 @@ class AutoAltTagGenerator {
 	 *
 	 * @var string
 	 */
+	private string $custom_prompt = '';
+
+	/**
+	 * Image size to use for API calls
+	 *
+	 * @var string
+	 */
+	private string $image_size = 'medium';
+
+	/**
+	 * Default prompt for alt text generation
+	 *
+	 * @var string
+	 */
 	private string $default_prompt = 'You are an accessibility expert. Generate ONLY the alt text for this image - no explanations, no options, just the final alt text. Describe what is shown objectively. For people, describe only their actions, clothing, or position - never mention age, attractiveness, weight, or other physical attributes that could be considered judgmental. Keep it under 125 characters. Do not include phrases like "image of" or "picture of". Return only the alt text string, nothing else.';
 	
 	/**
@@ -329,6 +343,8 @@ class AutoAltTagGenerator {
 		$this->model_name = get_option( 'auto_alt_model_name', 'gemini-2.5-flash' );
 		$this->debug_mode = (bool) get_option( 'auto_alt_debug_mode', false );
 		$this->auto_generate = (bool) get_option( 'auto_alt_auto_generate', true );
+		$this->custom_prompt = get_option( 'auto_alt_custom_prompt', '' );
+		$this->image_size = get_option( 'auto_alt_image_size', 'medium' );
 		add_action( 'add_attachment', array( $this, 'on_attachment_upload' ) );
 		add_action( 'admin_notices', array( $this, 'admin_notice_queue' ) );
 		add_filter( 'manage_media_columns', array( $this, 'media_column_header' ) );
@@ -387,14 +403,16 @@ class AutoAltTagGenerator {
 		}
 
 		// Clean up transients.
-		delete_transient( 'auto_alt_offset' );
 		delete_transient( 'auto_alt_success_count' );
 		delete_transient( 'auto_alt_debug_logs' );
 
 		// Clean up rate limit transients for all users.
 		global $wpdb;
-		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_auto_alt_rate_limit_%'" );
-		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_auto_alt_rate_limit_%'" );
+		$wpdb->query( $wpdb->prepare(
+			"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+			$wpdb->esc_like( '_transient_auto_alt_rate_limit_' ) . '%',
+			$wpdb->esc_like( '_transient_timeout_auto_alt_rate_limit_' ) . '%'
+		) );
 	}
 
 	/**
@@ -772,7 +790,8 @@ class AutoAltTagGenerator {
 					ON p.ID = pm.post_id AND pm.meta_key = %s
 				WHERE p.post_type = %s
 				AND p.post_mime_type LIKE %s
-				ORDER BY p.ID ASC",
+				ORDER BY p.ID ASC
+				LIMIT 50000",
 				'_wp_attachment_image_alt',
 				'attachment',
 				'image/%'
@@ -880,6 +899,10 @@ class AutoAltTagGenerator {
 		foreach ( $parsed['valid'] as $attachment_id => $alt_text ) {
 			if ( ! get_post( $attachment_id ) ) {
 				$parsed['errors'][] = sprintf( __( 'ID %d: attachment not found', 'auto-alt-tags' ), $attachment_id );
+				continue;
+			}
+			if ( ! wp_attachment_is_image( $attachment_id ) ) {
+				$parsed['errors'][] = sprintf( __( 'ID %d: not an image attachment', 'auto-alt-tags' ), $attachment_id );
 				continue;
 			}
 			update_post_meta( $attachment_id, '_wp_attachment_image_alt', $alt_text );
@@ -1215,6 +1238,8 @@ class AutoAltTagGenerator {
 								</th>
 								<td>
 									<?php
+									$current_provider_for_limits = $this->current_provider;
+									$current_limits              = $this->get_model_rate_limits()[ $this->model_name ] ?? null;
 									$max_batch   = ( 'gemini' === $current_provider_for_limits && $current_limits ) ? $current_limits['max_batch'] : 50;
 									$saved_batch = (int) get_option( 'auto_alt_batch_size', 5 );
 									$safe_batch  = min( $saved_batch, $max_batch );
@@ -1470,7 +1495,7 @@ class AutoAltTagGenerator {
 	 * @return array Result array
 	 */
 	private function test_gemini_connection( string $api_key ): array {
-		$model = get_option( 'auto_alt_model_name', 'gemini-2.5-flash' );
+		$model = $this->model_name;
 		$api_url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent?key=' . $api_key;
 		
 		$payload = array(
@@ -1765,7 +1790,7 @@ class AutoAltTagGenerator {
 			)
 		);
 
-		$image_size = get_option( 'auto_alt_image_size', 'medium' );
+		$image_size = $this->image_size;
 		$images     = array();
 
 		foreach ( $ids as $id ) {
@@ -1832,7 +1857,8 @@ class AutoAltTagGenerator {
 		if ( ! empty( $posted_ids ) ) {
 			$images_without_alt = $posted_ids;
 		} else {
-			$images_without_alt = $this->get_images_without_alt();
+			$batch_size_for_query = (int) get_option( 'auto_alt_batch_size', $this->batch_size );
+			$images_without_alt = $this->get_images_without_alt( $batch_size_for_query );
 		}
 		$total_remaining = count( $images_without_alt );
 
@@ -1865,8 +1891,7 @@ class AutoAltTagGenerator {
 		$batch_size = (int) get_option( 'auto_alt_batch_size', $this->batch_size );
 		$model_limits = array();
 		if ( 'gemini' === $current_provider ) {
-			$model_name   = get_option( 'auto_alt_model_name', 'gemini-2.5-flash' );
-			$model_limits = $this->get_model_rate_limits()[ $model_name ] ?? array();
+			$model_limits = $this->get_model_rate_limits()[ $this->model_name ] ?? array();
 		}
 		$hard_max   = ! empty( $model_limits ) ? $model_limits['max_batch'] : 50;
 		$batch_size = max( 1, min( $hard_max, $batch_size ) );
@@ -2004,8 +2029,13 @@ class AutoAltTagGenerator {
 	 * @return array Statistics array with total, with_alt, without_alt, percentage keys
 	 */
 	private function get_image_statistics(): array {
+		$cached = get_transient( 'auto_alt_image_stats' );
+		if ( false !== $cached ) {
+			return $cached;
+		}
+
 		global $wpdb;
-		
+
 		// Total images
 		$total_images = (int) $wpdb->get_var( $wpdb->prepare(
 			"SELECT COUNT(*) 
@@ -2034,12 +2064,16 @@ class AutoAltTagGenerator {
 		$images_without_alt = $total_images - $images_with_alt;
 		$percentage = $total_images > 0 ? round( ( $images_with_alt / $total_images ) * 100, 1 ) : 0;
 		
-		return array(
+		$stats = array(
 			'total'       => $total_images,
 			'with_alt'    => $images_with_alt,
 			'without_alt' => $images_without_alt,
 			'percentage'  => $percentage,
 		);
+
+		set_transient( 'auto_alt_image_stats', $stats, 5 * MINUTE_IN_SECONDS );
+
+		return $stats;
 	}
 	
 	/**
@@ -2047,24 +2081,24 @@ class AutoAltTagGenerator {
 	 *
 	 * @return array Array of attachment IDs
 	 */
-	private function get_images_without_alt(): array {
+	private function get_images_without_alt( int $limit = 0 ): array {
 		global $wpdb;
-		
-		$query = $wpdb->prepare(
-			"SELECT p.ID 
+
+		$sql = "SELECT p.ID
 			FROM {$wpdb->posts} p
 			LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = %s
 			WHERE p.post_type = %s
 			AND p.post_mime_type LIKE %s
 			AND (pm.meta_value IS NULL OR pm.meta_value = %s)
-			ORDER BY p.ID ASC",
-			'_wp_attachment_image_alt',
-			'attachment',
-			'image/%',
-			''
-		);
-		
-		return $wpdb->get_col( $query );
+			ORDER BY p.ID ASC";
+		$args = array( '_wp_attachment_image_alt', 'attachment', 'image/%', '' );
+
+		if ( $limit > 0 ) {
+			$sql .= ' LIMIT %d';
+			$args[] = $limit;
+		}
+
+		return $wpdb->get_col( $wpdb->prepare( $sql, $args ) );
 	}
 	
 	/**
@@ -2076,7 +2110,7 @@ class AutoAltTagGenerator {
 	private function generate_alt_tag( int $attachment_id ): array {
 		try {
 			// Get image URL using WordPress built-in sizes
-			$image_size = get_option( 'auto_alt_image_size', 'medium' );
+			$image_size = $this->image_size;
 			$image_data = wp_get_attachment_image_src( $attachment_id, $image_size );
 			
 			if ( ! $image_data ) {
@@ -2131,7 +2165,8 @@ class AutoAltTagGenerator {
 			
 			// Save alt text
 			update_post_meta( $attachment_id, '_wp_attachment_image_alt', sanitize_text_field( $alt_text ) );
-			
+			delete_transient( 'auto_alt_image_stats' );
+
 			return array(
 				'success'  => true,
 				'alt_text' => $alt_text,
@@ -2191,11 +2226,11 @@ class AutoAltTagGenerator {
 		$mime_type = wp_check_filetype( $image_path )['type'] ?: 'image/jpeg';
 		
 		// Get the prompt (custom or default)
-		$custom_prompt = get_option( 'auto_alt_custom_prompt', '' );
+		$custom_prompt = $this->custom_prompt;
 		$prompt = ! empty( $custom_prompt ) ? $custom_prompt : $this->default_prompt;
 		
 		// Use the selected model and validate it
-		$model = get_option( 'auto_alt_model_name', 'gemini-2.5-flash' );
+		$model = $this->model_name;
 		$available_models = $this->available_providers['gemini']['models'];
 		if ( ! array_key_exists( $model, $available_models ) ) {
 			$model = 'gemini-2.5-flash'; // Fallback to default if invalid
@@ -2287,11 +2322,11 @@ class AutoAltTagGenerator {
 		$mime_type = wp_check_filetype( $image_path )['type'] ?: 'image/jpeg';
 		
 		// Get the prompt (custom or default)
-		$custom_prompt = get_option( 'auto_alt_custom_prompt', '' );
+		$custom_prompt = $this->custom_prompt;
 		$prompt = ! empty( $custom_prompt ) ? $custom_prompt : $this->default_prompt;
 		
 		// Use the selected model
-		$model = get_option( 'auto_alt_model_name', 'gpt-4o' );
+		$model = $this->model_name;
 		
 		$this->debug_log( sprintf( 'Calling OpenAI API with model: %s', $model ) );
 		
@@ -2377,11 +2412,11 @@ class AutoAltTagGenerator {
 		$mime_type = wp_check_filetype( $image_path )['type'] ?: 'image/jpeg';
 		
 		// Get the prompt (custom or default)
-		$custom_prompt = get_option( 'auto_alt_custom_prompt', '' );
+		$custom_prompt = $this->custom_prompt;
 		$prompt = ! empty( $custom_prompt ) ? $custom_prompt : $this->default_prompt;
 		
 		// Use the selected model
-		$model = get_option( 'auto_alt_model_name', 'claude-3-5-sonnet-20241022' );
+		$model = $this->model_name;
 		
 		$this->debug_log( sprintf( 'Calling Claude API with model: %s', $model ) );
 		
@@ -2470,11 +2505,11 @@ class AutoAltTagGenerator {
 		$mime_type = wp_check_filetype( $image_path )['type'] ?: 'image/jpeg';
 		
 		// Get the prompt (custom or default)
-		$custom_prompt = get_option( 'auto_alt_custom_prompt', '' );
+		$custom_prompt = $this->custom_prompt;
 		$prompt = ! empty( $custom_prompt ) ? $custom_prompt : $this->default_prompt;
 		
 		// Use the selected model
-		$model = get_option( 'auto_alt_model_name', 'anthropic/claude-3.5-sonnet' );
+		$model = $this->model_name;
 		
 		$this->debug_log( sprintf( 'Calling OpenRouter API with model: %s', $model ) );
 		
@@ -2562,8 +2597,8 @@ class AutoAltTagGenerator {
 		$this->debug_log( 'Testing first 5 images...' );
 		
 		// Get first 5 images without alt text
-		$images_without_alt = $this->get_images_without_alt();
-		$test_images = array_slice( $images_without_alt, 0, 5 );
+		$images_without_alt = $this->get_images_without_alt( 5 );
+		$test_images = $images_without_alt;
 		
 		if ( empty( $test_images ) ) {
 			wp_send_json_success( array(
@@ -2579,8 +2614,7 @@ class AutoAltTagGenerator {
 		// Determine inter-call sleep based on model rate limits
 		$test_model_limits    = array();
 		if ( 'gemini' === $current_provider ) {
-			$test_model_name   = get_option( 'auto_alt_model_name', 'gemini-2.5-flash' );
-			$test_model_limits = $this->get_model_rate_limits()[ $test_model_name ] ?? array();
+			$test_model_limits = $this->get_model_rate_limits()[ $this->model_name ] ?? array();
 		}
 		$test_inter_call_sleep = ! empty( $test_model_limits ) ? $test_model_limits['sleep'] : 0;
 
@@ -2647,7 +2681,7 @@ class AutoAltTagGenerator {
 			'results' => $results,
 			'errors' => $errors,
 			'provider' => $this->available_providers[ $current_provider ]['name'] ?? $current_provider,
-			'model' => get_option( 'auto_alt_model_name', 'gemini-2.5-flash' ),
+			'model' => $this->model_name,
 		) );
 	}
 	
@@ -2660,7 +2694,7 @@ class AutoAltTagGenerator {
 	private function generate_alt_tag_preview( int $attachment_id ): array {
 		try {
 			// Get image URL using WordPress built-in sizes
-			$image_size = get_option( 'auto_alt_image_size', 'medium' );
+			$image_size = $this->image_size;
 			$image_data = wp_get_attachment_image_src( $attachment_id, $image_size );
 			
 			if ( ! $image_data ) {
