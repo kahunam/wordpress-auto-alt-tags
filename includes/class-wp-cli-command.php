@@ -523,7 +523,12 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 		 * @return string|false Generated alt text or false on failure
 		 */
 		private function call_gemini_api( string $image_path ) {
-			$image_data = file_get_contents( $image_path );
+			global $wp_filesystem;
+			if ( empty( $wp_filesystem ) ) {
+				require_once ABSPATH . 'wp-admin/includes/file.php';
+				WP_Filesystem();
+			}
+			$image_data = $wp_filesystem->get_contents( $image_path );
 			if ( false === $image_data ) {
 				return false;
 			}

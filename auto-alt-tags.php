@@ -2216,7 +2216,12 @@ class AutoAltTagGenerator {
 		}
 		
 		// Read and encode image
-		$image_data = file_get_contents( $image_path );
+		global $wp_filesystem;
+		if ( empty( $wp_filesystem ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			WP_Filesystem();
+		}
+		$image_data = $wp_filesystem->get_contents( $image_path );
 		if ( false === $image_data ) {
 			$this->debug_log( 'Failed to read image file' );
 			return false;
@@ -2312,7 +2317,12 @@ class AutoAltTagGenerator {
 		}
 		
 		// Read and encode image
-		$image_data = file_get_contents( $image_path );
+		global $wp_filesystem;
+		if ( empty( $wp_filesystem ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			WP_Filesystem();
+		}
+		$image_data = $wp_filesystem->get_contents( $image_path );
 		if ( false === $image_data ) {
 			$this->debug_log( 'Failed to read image file' );
 			return false;
@@ -2402,7 +2412,12 @@ class AutoAltTagGenerator {
 		}
 		
 		// Read and encode image
-		$image_data = file_get_contents( $image_path );
+		global $wp_filesystem;
+		if ( empty( $wp_filesystem ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			WP_Filesystem();
+		}
+		$image_data = $wp_filesystem->get_contents( $image_path );
 		if ( false === $image_data ) {
 			$this->debug_log( 'Failed to read image file' );
 			return false;
@@ -2495,7 +2510,12 @@ class AutoAltTagGenerator {
 		}
 		
 		// Read and encode image
-		$image_data = file_get_contents( $image_path );
+		global $wp_filesystem;
+		if ( empty( $wp_filesystem ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			WP_Filesystem();
+		}
+		$image_data = $wp_filesystem->get_contents( $image_path );
 		if ( false === $image_data ) {
 			$this->debug_log( 'Failed to read image file' );
 			return false;
