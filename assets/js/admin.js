@@ -24,8 +24,6 @@
      * Log debug message to console and UI
      */
     function debugLog(message) {
-        console.log('[Auto Alt Tags]', message);
-
         const logContent = $('#ka_alt_log_content');
         if (logContent.length) {
             const timestamp = new Date().toLocaleTimeString();

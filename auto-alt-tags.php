@@ -681,6 +681,32 @@ class AutoAltTagGenerator {
 	}
 
 	/**
+	 * Enforce a per-user hourly rate limit shared across all paid-API endpoints.
+	 *
+	 * Every endpoint that triggers paid API calls draws from the same transient
+	 * budget (auto_alt_rate_limit_<user_id>, 30/hour), so a caller cannot bypass
+	 * the limit by spreading requests across different endpoints. When within the
+	 * limit the budget is incremented by $cost and true is returned; when the
+	 * limit is already exceeded the budget is left untouched and false is returned.
+	 *
+	 * @param int $cost Number of API calls this request will consume from the budget.
+	 * @return bool True if the request is within the limit, false if it is exceeded.
+	 */
+	private function check_rate_limit( int $cost = 1 ): bool {
+		$user_id        = get_current_user_id();
+		$rate_limit_key = 'auto_alt_rate_limit_' . $user_id;
+		$attempts       = (int) ( get_transient( $rate_limit_key ) ?: 0 );
+
+		if ( $attempts > 30 ) { // 30 requests per hour
+			return false;
+		}
+
+		set_transient( $rate_limit_key, $attempts + $cost, HOUR_IN_SECONDS );
+
+		return true;
+	}
+
+	/**
 	 * AJAX: regenerate alt text for a single attachment.
 	 */
 	public function ajax_regenerate_single(): void {
@@ -689,6 +715,11 @@ class AutoAltTagGenerator {
 		}
 		if ( ! current_user_can( 'upload_files' ) ) {
 			wp_send_json_error( __( 'Unauthorized', 'auto-alt-tags' ) );
+		}
+
+		// Rate limiting — shared per-user hourly budget across all paid-API endpoints.
+		if ( ! $this->check_rate_limit( 1 ) ) {
+			wp_send_json_error( __( 'Rate limit exceeded. Please try again later.', 'auto-alt-tags' ) );
 		}
 
 		$attachment_id = (int) ( $_POST['id'] ?? 0 );
@@ -1835,17 +1866,11 @@ class AutoAltTagGenerator {
 			wp_send_json_error( sprintf( __( '%s API key not configured', 'auto-alt-tags' ), $provider_name ) );
 		}
 		
-		// Rate limiting
-		$user_id = get_current_user_id();
-		$rate_limit_key = 'auto_alt_rate_limit_' . $user_id;
-		$attempts = get_transient( $rate_limit_key ) ?: 0;
-		
-		if ( $attempts > 30 ) { // 30 requests per hour
+		// Rate limiting — shared per-user hourly budget across all paid-API endpoints.
+		if ( ! $this->check_rate_limit( 1 ) ) {
 			wp_send_json_error( __( 'Rate limit exceeded. Please try again later.', 'auto-alt-tags' ) );
 		}
-		
-		set_transient( $rate_limit_key, $attempts + 1, HOUR_IN_SECONDS );
-		
+
 		$this->debug_log( 'Starting alt tag processing...' );
 
 		// If specific IDs were posted (Select Images tab), process only those.
@@ -2613,7 +2638,13 @@ class AutoAltTagGenerator {
 			$provider_name = $this->available_providers[ $current_provider ]['name'] ?? 'Selected';
 			wp_send_json_error( sprintf( __( '%s API key not configured', 'auto-alt-tags' ), $provider_name ) );
 		}
-		
+
+		// Rate limiting — this endpoint fires up to 5 paid API calls, so it
+		// consumes 5 from the shared per-user hourly budget.
+		if ( ! $this->check_rate_limit( 5 ) ) {
+			wp_send_json_error( __( 'Rate limit exceeded. Please try again later.', 'auto-alt-tags' ) );
+		}
+
 		$this->debug_log( 'Testing first 5 images...' );
 		
 		// Get first 5 images without alt text
@@ -2796,7 +2827,7 @@ class AutoAltTagGenerator {
 		
 		// Also store in transient for display in admin
 		$logs = get_transient( 'auto_alt_debug_logs' ) ?: array();
-		$logs[] = date( 'Y-m-d H:i:s' ) . ' - ' . $message;
+		$logs[] = gmdate( 'Y-m-d H:i:s' ) . ' - ' . $message;
 		
 		// Keep only last 100 log entries
 		if ( count( $logs ) > 100 ) {
